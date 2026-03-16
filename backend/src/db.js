@@ -3,16 +3,14 @@ import mysql from "mysql2/promise";
 
 dotenv.config();
 
-const {
-  DB_HOST = "localhost",
-  DB_PORT = 3306,
-  DB_USER,
-  DB_PASSWORD,
-  DB_NAME
-} = process.env;
+const DB_HOST = process.env.DB_HOST || process.env.MYSQLHOST || "localhost";
+const DB_PORT = process.env.DB_PORT || process.env.MYSQLPORT || 3306;
+const DB_USER = process.env.DB_USER || process.env.MYSQLUSER;
+const DB_PASSWORD = process.env.DB_PASSWORD || process.env.MYSQLPASSWORD;
+const DB_NAME = process.env.DB_NAME || process.env.MYSQLDATABASE;
 
 if (!DB_USER || !DB_PASSWORD || !DB_NAME) {
-  throw new Error("Database credentials are missing. Set DB_USER, DB_PASSWORD, and DB_NAME in .env");
+  throw new Error("Database credentials are missing. Set DB_* or Railway MYSQL* variables.");
 }
 
 export const pool = mysql.createPool({
