@@ -1,0 +1,48 @@
+<section class="section">
+  <div class="container product-layout">
+    <div class="card animate">
+      {%- if product.media.size > 0 -%}
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+          {%- for media in product.media limit: 4 -%}
+            <div class="hero-visual" style="padding: 10px;">
+              {{ media | media_tag: image_size: '600x' }}
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- elsif product.featured_image -%}
+        <div class="hero-visual">
+          <img src="{{ product.featured_image | img_url: '720x' }}" alt="{{ product.title }}">
+        </div>
+      {%- endif -%}
+    </div>
+    <div class="card animate">
+      <div class="tag">{{ 'product.tag' | t }}</div>
+      <h1 class="title-lg">{{ product.title }}</h1>
+      <div class="price">{{ product.price | money_with_currency }}</div>
+      <p class="text">{{ product.description }}</p>
+      <div class="payment-strip" style="margin: 12px 0;">
+        <span class="text" style="font-weight: 600;">{{ 'product.payments' | t }}</span>
+        <img src="{{ 'payment-card.svg' | asset_url }}" alt="{{ 'footer.card' | t }}">
+        <img src="{{ 'payment-instapay.svg' | asset_url }}" alt="InstaPay">
+        <img src="{{ 'payment-vodafone.svg' | asset_url }}" alt="Vodafone Cash">
+      </div>
+      <form method="post" action="/cart/add" style="display: grid; gap: 12px;">
+        <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+        {%- if product.options_with_values.size > 0 -%}
+          {%- for option in product.options_with_values -%}
+            <label class="text" for="Option-{{ forloop.index }}">{{ option.name }}</label>
+            <select class="input" name="options[{{ option.name }}]" id="Option-{{ forloop.index }}">
+              {%- for value in option.values -%}
+                <option value="{{ value }}" {% if option.selected_value == value %}selected{% endif %}>{{ value }}</option>
+              {%- endfor -%}
+            </select>
+          {%- endfor -%}
+        {%- endif -%}
+        <button class="button" type="submit">{{ 'product.add_to_cart' | t }}</button>
+      </form>
+      <div class="pill" style="margin-top: 10px;">{{ 'product.price_note' | t }}</div>
+    </div>
+  </div>
+</section>
+
+{% section 'faq' %}

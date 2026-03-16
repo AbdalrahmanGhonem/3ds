@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Theme settings",
+    "settings": [
+      {
+        "type": "text",
+        "id": "accent_color",
+        "label": "Accent color",
+        "default": "#7cf5c5"
+      },
+      {
+        "type": "text",
+        "id": "secondary_accent",
+        "label": "Secondary accent",
+        "default": "#5a7bff"
+      }
+    ]
+  }
+]

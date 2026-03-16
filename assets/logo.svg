@@ -1,0 +1,26 @@
+<svg width="320" height="220" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .outer { stroke: #6f8fa3; stroke-width: 26; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .inner { stroke: #2f4a60; stroke-width: 16; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .text { font-family: 'Space Grotesk', 'Work Sans', system-ui, sans-serif; fill: #2f4a60; font-weight: 700; }
+      .sub { font-weight: 500; letter-spacing: 3px; }
+    </style>
+  </defs>
+  <g transform="translate(160 110)">
+    <g class="ring">
+      <path class="outer" d="M0 -90 L78 45 H-78 Z" />
+      <path class="inner" d="M0 -70 L60 35 H-60 Z" />
+    </g>
+    <g class="ring" transform="rotate(120)">
+      <path class="outer" d="M0 -90 L78 45 H-78 Z" />
+      <path class="inner" d="M0 -70 L60 35 H-60 Z" />
+    </g>
+    <g class="ring" transform="rotate(240)">
+      <path class="outer" d="M0 -90 L78 45 H-78 Z" />
+      <path class="inner" d="M0 -70 L60 35 H-60 Z" />
+    </g>
+  </g>
+  <text class="text" x="50%" y="195" font-size="28" text-anchor="middle">3DS - PRINTING</text>
+  <text class="text sub" x="50%" y="213" font-size="14" text-anchor="middle">OWN THE ODD</text>
+</svg>

@@ -1,0 +1,33 @@
+<header class="sticky-header" data-header>
+  <div class="container flex-between" style="padding: 14px var(--loose);">
+    <div class="flex" style="align-items: center; gap: 12px;">
+      <div class="pill" aria-label="{{ 'general.accessibility.logo' | t | default: 'Logo' }}">
+        <strong>{{ shop.name }}</strong>
+      </div>
+      <span class="badge">{{ 'header.keychains' | t }}</span>
+    </div>
+    <nav class="nav" aria-label="{{ 'general.navigation' | t }}">
+      <a href="{{ routes.root_url }}" class="{% if template.name == 'index' %}active{% endif %}">{{ 'navigation.home' | t }}</a>
+      <a href="{{ routes.collections_url }}" class="{% if template.name contains 'collection' %}active{% endif %}">{{ 'navigation.shop' | t }}</a>
+      <a href="/pages/about" class="{% if template.name contains 'page' and page.handle == 'about' %}active{% endif %}">{{ 'navigation.about' | t }}</a>
+      <a href="/pages/faq" class="{% if template.name contains 'page' and page.handle == 'faq' %}active{% endif %}">{{ 'navigation.faq' | t }}</a>
+      <a href="/pages/contact" class="{% if template.name contains 'page' and page.handle == 'contact' %}active{% endif %}">{{ 'navigation.contact' | t }}</a>
+    </nav>
+    <div class="flex" style="align-items: center;">
+      {% form 'localization', id: 'LanguageSwitch', class: 'language-toggle' %}
+        <label for="LanguageSelect" class="visually-hidden">{{ 'language.select' | t }}</label>
+        <select id="LanguageSelect" name="locale_code" data-language-select>
+          {% for locale in localization.available_languages %}
+            <option value="{{ locale.iso_code }}" {% if locale.iso_code == localization.language.iso_code %}selected{% endif %}>
+              {{ locale.endonym_name | capitalize }}
+            </option>
+          {% endfor %}
+        </select>
+      {% endform %}
+      <button class="cart-toggle" type="button" data-cart-open>
+        <span>{{ 'cart.title' | t }}</span>
+        <span class="badge" aria-label="{{ cart.item_count }} items">{{ cart.item_count }}</span>
+      </button>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,70 @@
+{
+  "general": {
+    "navigation": "Navigation",
+    "accessibility": {
+      "logo": "Logo"
+    }
+  },
+  "header": {
+    "keychains": "3D Keychains"
+  },
+  "navigation": {
+    "home": "Home",
+    "shop": "Shop",
+    "about": "About",
+    "faq": "FAQ",
+    "contact": "Contact"
+  },
+  "language": {
+    "select": "Select language"
+  },
+  "footer": {
+    "tagline": "Premium 3D printed keychains made in Egypt.",
+    "payments": "Payments",
+    "card": "Card"
+  },
+  "hero": {
+    "badge_print": "Printed in Cairo",
+    "badge_delivery": "Delivery in 2-4 days",
+    "badge_materials": "Premium PLA+/PETG"
+  },
+  "featured": {
+    "tag": "Best sellers",
+    "view_all": "View all",
+    "cta": "Add to cart",
+    "empty": "Add products to this collection.",
+    "no_image": "No image"
+  },
+  "story": {
+    "tag": "Our story"
+  },
+  "faq": {
+    "tag": "FAQ"
+  },
+  "contact": {
+    "tag": "Contact us",
+    "name": "Name",
+    "email": "Email",
+    "message": "Your message",
+    "submit": "Send"
+  },
+  "collections": {
+    "count": "Items",
+    "view": "View",
+    "empty": "No products yet."
+  },
+  "product": {
+    "tag": "Keychain",
+    "payments": "Pay with card, InstaPay, Vodafone Cash",
+    "add_to_cart": "Add to cart",
+    "price_note": "Standard price: 300 EGP"
+  },
+  "cart": {
+    "title": "Cart",
+    "close": "Close",
+    "empty": "Your cart is empty.",
+    "total": "Total",
+    "view_cart": "View cart",
+    "checkout": "Checkout"
+  }
+}

@@ -1,0 +1,3 @@
+ALTER TABLE products
+  ADD COLUMN image_url VARCHAR(255) DEFAULT '' AFTER color,
+  ADD COLUMN featured TINYINT(1) NOT NULL DEFAULT 0 AFTER image_url;

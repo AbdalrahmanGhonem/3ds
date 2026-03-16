@@ -1,0 +1,19 @@
+<svg width="240" height="120" viewBox="0 0 240 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .navy { fill: #003087; }
+      .blue { fill: #009cde; }
+      .text { font-family: 'Space Grotesk', 'Work Sans', system-ui, sans-serif; font-weight: 800; }
+    </style>
+  </defs>
+  <!-- Mark -->
+  <g transform="translate(16 6)">
+    <path class="navy" d="M44 0h40c14.5 0 24 8.5 24 21.5 0 17-13 30.5-33 30.5H53l-9-52Z" opacity="0.95"/>
+    <path class="blue" d="M86 16h-26L48 110c-.2 1.3.7 2.5 2 2.5h20c4.5 0 8.3-3.3 9-7.8l7-43.7c.2-1.4 1.4-2.5 2.8-2.5h16.7c13.3 0 23.5-8.3 26.2-22.3C135 17.2 126.3 8 112.6 8h-20c-2.6 0-4.8 1.8-5.3 4.3L86 16Z" />
+  </g>
+  <!-- Wordmark -->
+  <g transform="translate(16 82)">
+    <text class="text navy" x="0" y="24" font-size="34">Pay</text>
+    <text class="text blue" x="68" y="24" font-size="34">Pal</text>
+  </g>
+</svg>

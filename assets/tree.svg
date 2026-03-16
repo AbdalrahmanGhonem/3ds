@@ -1,0 +1,21 @@
+<svg width="360" height="420" viewBox="0 0 360 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="treegrad" x1="90" y1="40" x2="270" y2="360" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#1f8a4c"/>
+    <stop offset="1" stop-color="#0f5a32"/>
+  </linearGradient>
+</defs>
+<rect width="360" height="420" fill="none"/>
+<g opacity="0.9">
+  <path d="M180 40 300 200h-80l70 90h-70l60 70H80l60-70H70l70-90H60L180 40Z" fill="url(#treegrad)" stroke="#0d3f24" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="140" cy="210" r="10" fill="#ffd166"/>
+  <circle cx="220" cy="240" r="10" fill="#ff6b6b"/>
+  <circle cx="200" cy="170" r="9" fill="#6ade80"/>
+  <circle cx="240" cy="130" r="8" fill="#60a5fa"/>
+  <circle cx="120" cy="260" r="9" fill="#fbbf24"/>
+  <circle cx="170" cy="300" r="10" fill="#ff6b6b"/>
+  <circle cx="210" cy="320" r="8" fill="#ffd166"/>
+  <rect x="150" y="330" width="60" height="60" rx="8" fill="#8b5a2b" stroke="#5a3a1c" stroke-width="6"/>
+  <path d="M180 18 190 34h18l-12 12 5 18-17-10-17 10 5-18-12-12h18L180 18Z" fill="#ffd166" stroke="#cfa500" stroke-width="4" stroke-linejoin="round"/>
+</g>
+</svg>

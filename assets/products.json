@@ -1,0 +1,50 @@
+[
+  {
+    "id": "cube",
+    "name": "Neon Cube Keychain",
+    "price": 300,
+    "description": "Matte neon finish with beveled edges and stainless split ring.",
+    "image": "assets/hero-keychain.svg",
+    "featured": true
+  },
+  {
+    "id": "ring",
+    "name": "Orbit Ring",
+    "price": 300,
+    "description": "Dual-color orbit design with floating core and glossy highlights.",
+    "image": "assets/hero-keychain.svg",
+    "featured": true
+  },
+  {
+    "id": "mono",
+    "name": "Monogram Block",
+    "price": 300,
+    "description": "Personalized block letters with recessed engraving.",
+    "image": "assets/hero-keychain.svg",
+    "featured": true
+  },
+  {
+    "id": "retro",
+    "name": "Retro Badge",
+    "price": 300,
+    "description": "Throwback badge silhouette with soft-touch finish.",
+    "image": "assets/hero-keychain.svg",
+    "featured": false
+  },
+  {
+    "id": "metallic",
+    "name": "Metallic Edge",
+    "price": 300,
+    "description": "Edge-highlighted form with metallic accents.",
+    "image": "assets/hero-keychain.svg",
+    "featured": false
+  },
+  {
+    "id": "glyph",
+    "name": "Glyph Tag",
+    "price": 300,
+    "description": "Minimal tag with etched glyph and satin texture.",
+    "image": "assets/hero-keychain.svg",
+    "featured": false
+  }
+]

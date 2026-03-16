@@ -1,0 +1,18 @@
+<svg width="180" height="60" viewBox="0 0 140 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .red { fill: #e60000; }
+      .green { fill: #5fb548; }
+      .text { font-family: 'Space Grotesk', 'Work Sans', system-ui, sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+  <!-- phone -->
+  <rect x="8" y="6" width="28" height="36" rx="6" stroke="#e60000" stroke-width="3"/>
+  <circle cx="22" cy="38" r="2" fill="#e60000"/>
+  <rect x="18" y="10" width="8" height="2" rx="1" fill="#e60000"/>
+  <!-- money -->
+  <path class="green" d="M32 18c-5 2-11 3-18 2 5.5-3.5 9-5.5 18-5.5 3 0 5.5 1.5 7 3.5-2.5.6-4.5 1.2-7 0z"/>
+  <!-- text -->
+  <text class="text red" x="46" y="24" font-size="16">vodafone</text>
+  <text class="text red" x="46" y="38" font-size="16">cash</text>
+</svg>

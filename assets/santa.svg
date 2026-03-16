@@ -1,0 +1,38 @@
+<svg width="700" height="700" viewBox="0 0 700 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="700" height="700" rx="80" fill="none"/>
+<g opacity="0.78">
+<circle cx="360" cy="360" r="240" fill="#0F111B" />
+<circle cx="360" cy="360" r="230" fill="url(#grad)" opacity="0.16"/>
+<circle cx="280" cy="310" r="120" fill="#F8F2E7"/>
+<circle cx="420" cy="310" r="120" fill="#F8F2E7"/>
+<rect x="190" y="300" width="320" height="200" rx="100" fill="#F8F2E7"/>
+<rect x="250" y="430" width="200" height="140" rx="70" fill="#E24B4B"/>
+<rect x="280" y="440" width="140" height="120" rx="60" fill="#F05D5D"/>
+<rect x="330" y="350" width="40" height="50" rx="20" fill="#0F111B"/>
+<ellipse cx="300" cy="320" rx="30" ry="16" fill="#E29D8F"/>
+<ellipse cx="420" cy="320" rx="30" ry="16" fill="#E29D8F"/>
+<ellipse cx="360" cy="370" rx="34" ry="24" fill="#F8F2E7"/>
+<circle cx="360" cy="260" r="110" fill="#F05D5D"/>
+<rect x="250" y="230" width="220" height="60" rx="30" fill="#0F111B"/>
+<rect x="300" y="240" width="120" height="40" rx="20" fill="#FFD166"/>
+<rect x="300" y="230" width="120" height="12" fill="#0F111B"/>
+<circle cx="360" cy="490" r="40" fill="#FFD166"/>
+<rect x="345" y="450" width="30" height="80" rx="12" fill="#0F111B"/>
+<rect x="315" y="505" width="90" height="18" rx="9" fill="#0F111B"/>
+<circle cx="280" cy="480" r="24" fill="#0F111B"/>
+<circle cx="440" cy="480" r="24" fill="#0F111B"/>
+<path d="M300 340c12 10 24 12 40 6" stroke="#0F111B" stroke-width="10" stroke-linecap="round"/>
+<path d="M420 340c-12 10-24 12-40 6" stroke="#0F111B" stroke-width="10" stroke-linecap="round"/>
+<circle cx="315" cy="295" r="8" fill="#0F111B"/>
+<circle cx="405" cy="295" r="8" fill="#0F111B"/>
+<path d="M280 250c20-22 52-32 80-32s60 10 80 32" stroke="#F8F2E7" stroke-width="16" stroke-linecap="round"/>
+<path d="M250 360c18 32 58 52 110 52s92-20 110-52" stroke="#F05D5D" stroke-width="16" stroke-linecap="round"/>
+</g>
+<defs>
+<linearGradient id="grad" x1="160" y1="120" x2="560" y2="600" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F05D5D"/>
+<stop offset="0.5" stop-color="#FFD166"/>
+<stop offset="1" stop-color="#6ADE80"/>
+</linearGradient>
+</defs>
+</svg>

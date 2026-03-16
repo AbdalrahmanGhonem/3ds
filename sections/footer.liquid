@@ -1,0 +1,31 @@
+<footer class="footer">
+  <div class="container">
+    <div class="flex-between" style="align-items: flex-start; gap: 18px; margin-bottom: 16px;">
+      <div>
+        <div class="pill">{{ shop.name }}</div>
+        <p class="text" style="margin-top: 8px;">{{ 'footer.tagline' | t }}</p>
+      </div>
+      <nav class="nav" aria-label="{{ 'general.navigation' | t }}">
+        <a href="{{ routes.root_url }}">{{ 'navigation.home' | t }}</a>
+        <a href="{{ routes.collections_url }}">{{ 'navigation.shop' | t }}</a>
+        <a href="/pages/about">{{ 'navigation.about' | t }}</a>
+        <a href="/pages/faq">{{ 'navigation.faq' | t }}</a>
+        <a href="/pages/contact">{{ 'navigation.contact' | t }}</a>
+      </nav>
+    </div>
+    <div class="payment-strip" aria-label="{{ 'footer.payments' | t }}">
+      <span class="text" style="font-weight: 600;">{{ 'footer.payments' | t }}</span>
+      <img src="{{ 'payment-card.svg' | asset_url }}" alt="{{ 'footer.card' | t }}">
+      <img src="{{ 'payment-instapay.svg' | asset_url }}" alt="InstaPay">
+      <img src="{{ 'payment-vodafone.svg' | asset_url }}" alt="Vodafone Cash">
+    </div>
+    <div class="footer-meta" style="margin-top: 16px;">
+      <span>© {{ 'now' | date: '%Y' }} {{ shop.name }}</span>
+      <div class="social">
+        <a href="https://www.instagram.com" aria-label="Instagram">IG</a>
+        <a href="https://www.facebook.com" aria-label="Facebook">FB</a>
+        <a href="https://www.tiktok.com" aria-label="TikTok">TT</a>
+      </div>
+    </div>
+  </div>
+</footer>
