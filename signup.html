@@ -38,22 +38,22 @@
               <h1 class="mock-page-title">Sign Up</h1>
               <p class="mock-page-subtitle">Create an account to save your details and log in again later.</p>
 
-              <form id="signup-form" class="mock-auth-form">
+              <form id="signup-form" class="mock-auth-form" novalidate>
                 <label class="mock-admin-field">
                   <span>Full Name</span>
                   <input class="mock-input" type="text" name="name" placeholder="Enter your full name" autocomplete="name" required>
                 </label>
                 <label class="mock-admin-field">
                   <span>Email</span>
-                  <input class="mock-input" type="email" name="email" placeholder="Enter your email" autocomplete="email" required>
+                  <input class="mock-input" type="email" name="email" placeholder="Enter your email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
                 </label>
                 <label class="mock-admin-field">
                   <span>Password</span>
-                  <input class="mock-input" type="password" name="password" placeholder="Create a password" autocomplete="new-password" minlength="6" required>
+                  <input class="mock-input" type="password" name="password" placeholder="Create a password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" required>
                 </label>
                 <label class="mock-admin-field">
                   <span>Confirm Password</span>
-                  <input class="mock-input" type="password" name="confirm" placeholder="Confirm your password" autocomplete="new-password" minlength="6" required>
+                  <input class="mock-input" type="password" name="confirm" placeholder="Confirm your password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" required>
                 </label>
                 <button class="mock-primary-button" type="submit">Create Account</button>
                 <div class="mock-admin-status" id="signup-status" role="status" hidden></div>

@@ -200,6 +200,22 @@ const authHeaders = () => {
   };
 };
 
+const clearFieldValidation = (input) => {
+  if (!(input instanceof HTMLInputElement)) return;
+  input.setCustomValidity("");
+};
+
+const showFieldValidation = (input, statusEl, message) => {
+  if (!(input instanceof HTMLInputElement)) return false;
+  input.setCustomValidity(message);
+  setStatus(statusEl, message, false);
+  input.reportValidity();
+  input.focus();
+  return false;
+};
+
+const isValidEmailAddress = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+
 applyAdminVisibility();
 syncAuthLinks();
 bindAuthLinks();
@@ -252,9 +268,26 @@ loginForm?.addEventListener("submit", async (event) => {
 const signupForm = document.getElementById("signup-form");
 const signupStatus = document.getElementById("signup-status");
 
+if (signupForm instanceof HTMLFormElement) {
+  const signupInputs = ["name", "email", "password", "confirm"]
+    .map((field) => signupForm.elements.namedItem(field))
+    .filter((input) => input instanceof HTMLInputElement);
+
+  signupInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      clearFieldValidation(input);
+      if (signupStatus) signupStatus.hidden = true;
+    });
+  });
+}
+
 signupForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(signupForm);
+  const nameInput = signupForm.elements.namedItem("name");
+  const emailInput = signupForm.elements.namedItem("email");
+  const passwordInput = signupForm.elements.namedItem("password");
+  const confirmInput = signupForm.elements.namedItem("confirm");
   const body = {
     name: String(formData.get("name") || "").trim(),
     email: String(formData.get("email") || "").trim(),
@@ -262,18 +295,43 @@ signupForm?.addEventListener("submit", async (event) => {
     confirm: String(formData.get("confirm") || "")
   };
 
-  if (!body.name || !body.email || !body.password || !body.confirm) {
-    setStatus(signupStatus, "All fields are required", false);
+  clearFieldValidation(nameInput);
+  clearFieldValidation(emailInput);
+  clearFieldValidation(passwordInput);
+  clearFieldValidation(confirmInput);
+
+  if (!body.name) {
+    showFieldValidation(nameInput, signupStatus, "Please enter your full name.");
     return;
   }
 
-  if (body.password !== body.confirm) {
-    setStatus(signupStatus, "Passwords do not match", false);
+  if (!body.email) {
+    showFieldValidation(emailInput, signupStatus, "Please enter your email address.");
+    return;
+  }
+
+  if (!isValidEmailAddress(body.email)) {
+    showFieldValidation(emailInput, signupStatus, "Please enter a valid email address.");
+    return;
+  }
+
+  if (!body.password) {
+    showFieldValidation(passwordInput, signupStatus, "Please enter a password.");
     return;
   }
 
   if (body.password.length < 6) {
-    setStatus(signupStatus, "Password must be at least 6 characters", false);
+    showFieldValidation(passwordInput, signupStatus, "Password must be at least 6 characters.");
+    return;
+  }
+
+  if (!body.confirm) {
+    showFieldValidation(confirmInput, signupStatus, "Please confirm your password.");
+    return;
+  }
+
+  if (body.password !== body.confirm) {
+    showFieldValidation(confirmInput, signupStatus, "Passwords do not match.");
     return;
   }
 
