@@ -31,11 +31,30 @@ const collectMissingOrUnresolved = (...keys) =>
     return !value || UNRESOLVED_ENV_PATTERN.test(value);
   });
 
-const DB_HOST = readEnvValue("DB_HOST", "MYSQLHOST") || "localhost";
-const DB_PORT = readEnvValue("DB_PORT", "MYSQLPORT") || "3306";
-const DB_USER = readEnvValue("DB_USER", "MYSQLUSER");
-const DB_PASSWORD = readEnvValue("DB_PASSWORD", "MYSQLPASSWORD");
-const DB_NAME = readEnvValue("DB_NAME", "MYSQLDATABASE");
+const parseConnectionUrl = (value) => {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return {
+      host: parsed.hostname || "",
+      port: parsed.port || "",
+      user: decodeURIComponent(parsed.username || ""),
+      password: decodeURIComponent(parsed.password || ""),
+      database: parsed.pathname ? parsed.pathname.replace(/^\/+/, "") : ""
+    };
+  } catch {
+    return null;
+  }
+};
+
+const connectionUrlValue = readEnvValue("DATABASE_URL", "MYSQL_URL", "MYSQL_PUBLIC_URL");
+const connectionUrlConfig = parseConnectionUrl(connectionUrlValue);
+
+const DB_HOST = readEnvValue("DB_HOST", "MYSQLHOST") || connectionUrlConfig?.host || "localhost";
+const DB_PORT = readEnvValue("DB_PORT", "MYSQLPORT") || connectionUrlConfig?.port || "3306";
+const DB_USER = readEnvValue("DB_USER", "MYSQLUSER") || connectionUrlConfig?.user || "";
+const DB_PASSWORD = readEnvValue("DB_PASSWORD", "MYSQLPASSWORD") || connectionUrlConfig?.password || "";
+const DB_NAME = readEnvValue("DB_NAME", "MYSQLDATABASE") || connectionUrlConfig?.database || "";
 
 const missingDebugVars = [
   ...collectMissingOrUnresolved("DB_HOST", "MYSQLHOST"),
@@ -45,10 +64,18 @@ const missingDebugVars = [
   ...collectMissingOrUnresolved("DB_NAME", "MYSQLDATABASE")
 ];
 
-if (missingDebugVars.length) {
+if (connectionUrlValue && !connectionUrlConfig) {
+  console.warn("[db] DATABASE_URL / MYSQL_URL exists but could not be parsed.");
+}
+
+if (missingDebugVars.length && !connectionUrlConfig) {
   console.warn(
     `[db] Missing or unresolved env vars detected: ${[...new Set(missingDebugVars)].join(", ")}`
   );
+}
+
+if (connectionUrlConfig) {
+  console.log("[db] Using database connection URL env.");
 }
 
 const missingConfigMessage =
