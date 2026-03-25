@@ -9,11 +9,47 @@ const envPath = path.resolve(__dirname, "..", ".env");
 
 dotenv.config({ path: envPath });
 
-const DB_HOST = process.env.DB_HOST || process.env.MYSQLHOST || "localhost";
-const DB_PORT = process.env.DB_PORT || process.env.MYSQLPORT || 3306;
-const DB_USER = process.env.DB_USER || process.env.MYSQLUSER;
-const DB_PASSWORD = process.env.DB_PASSWORD || process.env.MYSQLPASSWORD;
-const DB_NAME = process.env.DB_NAME || process.env.MYSQLDATABASE;
+const UNRESOLVED_ENV_PATTERN = /^\$\{[A-Z0-9_]+\}$/i;
+
+const readEnvValue = (...keys) => {
+  for (const key of keys) {
+    const rawValue = process.env[key];
+    if (rawValue === undefined || rawValue === null) continue;
+    const value = String(rawValue).trim();
+    if (!value) continue;
+    if (UNRESOLVED_ENV_PATTERN.test(value)) continue;
+    return value;
+  }
+  return "";
+};
+
+const collectMissingOrUnresolved = (...keys) =>
+  keys.filter((key) => {
+    const rawValue = process.env[key];
+    if (rawValue === undefined || rawValue === null) return true;
+    const value = String(rawValue).trim();
+    return !value || UNRESOLVED_ENV_PATTERN.test(value);
+  });
+
+const DB_HOST = readEnvValue("DB_HOST", "MYSQLHOST") || "localhost";
+const DB_PORT = readEnvValue("DB_PORT", "MYSQLPORT") || "3306";
+const DB_USER = readEnvValue("DB_USER", "MYSQLUSER");
+const DB_PASSWORD = readEnvValue("DB_PASSWORD", "MYSQLPASSWORD");
+const DB_NAME = readEnvValue("DB_NAME", "MYSQLDATABASE");
+
+const missingDebugVars = [
+  ...collectMissingOrUnresolved("DB_HOST", "MYSQLHOST"),
+  ...collectMissingOrUnresolved("DB_PORT", "MYSQLPORT"),
+  ...collectMissingOrUnresolved("DB_USER", "MYSQLUSER"),
+  ...collectMissingOrUnresolved("DB_PASSWORD", "MYSQLPASSWORD"),
+  ...collectMissingOrUnresolved("DB_NAME", "MYSQLDATABASE")
+];
+
+if (missingDebugVars.length) {
+  console.warn(
+    `[db] Missing or unresolved env vars detected: ${[...new Set(missingDebugVars)].join(", ")}`
+  );
+}
 
 if (!DB_USER || !DB_PASSWORD || !DB_NAME) {
   throw new Error("Database credentials are missing. Set DB_* or Railway MYSQL* variables.");
