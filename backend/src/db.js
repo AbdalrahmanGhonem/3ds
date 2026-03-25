@@ -9,7 +9,7 @@ const envPath = path.resolve(__dirname, "..", ".env");
 
 dotenv.config({ path: envPath });
 
-const UNRESOLVED_ENV_PATTERN = /^\$\{[A-Z0-9_]+\}$/i;
+const UNRESOLVED_ENV_PATTERN = /^\$\{\{?[^}]+\}?\}$/;
 
 const readEnvValue = (...keys) => {
   for (const key of keys) {
@@ -51,17 +51,35 @@ if (missingDebugVars.length) {
   );
 }
 
-if (!DB_USER || !DB_PASSWORD || !DB_NAME) {
-  throw new Error("Database credentials are missing. Set DB_* or Railway MYSQL* variables.");
-}
+const missingConfigMessage =
+  "Database credentials are missing or unresolved. Checked DB_* and Railway MYSQL* variables.";
 
-export const pool = mysql.createPool({
-  host: DB_HOST,
-  port: Number(DB_PORT),
-  user: DB_USER,
-  password: DB_PASSWORD,
-  database: DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const createUnavailablePool = () => {
+  const error = new Error(missingConfigMessage);
+  return {
+    query: async () => {
+      throw error;
+    },
+    execute: async () => {
+      throw error;
+    },
+    getConnection: async () => {
+      throw error;
+    },
+    end: async () => {}
+  };
+};
+
+export const pool =
+  DB_USER && DB_PASSWORD && DB_NAME
+    ? mysql.createPool({
+        host: DB_HOST,
+        port: Number(DB_PORT),
+        user: DB_USER,
+        password: DB_PASSWORD,
+        database: DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      })
+    : createUnavailablePool();
