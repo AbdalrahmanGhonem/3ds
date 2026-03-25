@@ -154,47 +154,6 @@ const sendPasswordResetEmail = async ({ email, fullName, token }) => {
   });
 };
 
-const ensureSupportTables = async () => {
-  const [cartColumns] = await pool.query(
-    `SELECT COLUMN_NAME, IS_NULLABLE
-     FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carts'`
-  );
-  const cartColumnMap = new Map(cartColumns.map((column) => [column.COLUMN_NAME, column]));
-
-  if (cartColumnMap.has("user_id") && cartColumnMap.get("user_id")?.IS_NULLABLE !== "YES") {
-    await pool.query("ALTER TABLE carts MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
-  }
-
-  if (!cartColumnMap.has("guest_token")) {
-    await pool.query("ALTER TABLE carts ADD COLUMN guest_token VARCHAR(64) NULL");
-  }
-
-  const [cartIndexes] = await pool.query(
-    `SELECT INDEX_NAME
-     FROM information_schema.STATISTICS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carts' AND INDEX_NAME = 'guest_token'
-     LIMIT 1`
-  );
-  if (!cartIndexes.length) {
-    await pool.query("ALTER TABLE carts ADD UNIQUE KEY guest_token (guest_token)");
-  }
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS password_resets (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      user_id BIGINT UNSIGNED NOT NULL,
-      token_hash CHAR(64) NOT NULL,
-      expires_at DATETIME NOT NULL,
-      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      UNIQUE KEY token_hash (token_hash),
-      KEY user_id (user_id),
-      CONSTRAINT password_resets_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-  `);
-};
-
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, callback) => {
     callback(null, uploadsDir);
@@ -617,14 +576,6 @@ for (const [routePath, fileName] of pageRoutes.entries()) {
   });
 }
 
-const startServer = async () => {
-  await ensureSupportTables();
-  app.listen(PORT, () => {
-    console.log(`API ready on port ${PORT}`);
-  });
-};
-
-startServer().catch((err) => {
-  console.error(err);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`API ready on port ${PORT}`);
 });
