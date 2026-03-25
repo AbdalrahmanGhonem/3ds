@@ -1,0 +1,471 @@
+body.mockup-site {
+  --mock-bg: #f7f7f5;
+  --mock-surface: #ffffff;
+  --mock-text: #020617;
+  --mock-muted: #475569;
+  --mock-border: #e2e8f0;
+  --mock-accent: #6fa8b8;
+  --mock-accent-soft: #e7f3f6;
+  --mock-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 20px rgba(15, 23, 42, 0.03);
+  margin: 0;
+  min-height: 100vh;
+  background: var(--mock-bg);
+  color: var(--mock-text);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+button, input, textarea { font: inherit; }
+.mock-shell { min-height: 100vh; }
+.mock-container { width: min(100%, 1152px); margin: 0 auto; padding-inline: 16px; }
+.mock-header { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--mock-border); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+.mock-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0 14px; }
+.mock-brand { font-size: 1.875rem; font-weight: 900; letter-spacing: -0.04em; }
+.mock-nav { display: none; align-items: center; gap: 24px; font-size: .875rem; font-weight: 500; color: #334155; }
+.mock-nav a.is-active { color: var(--mock-text); }
+.mock-header__icons { display: flex; align-items: center; gap: 15px; }
+.mock-icon-button { border: none; background: transparent; padding: 0; color: var(--mock-text); display: inline-flex; align-items: center; justify-content: center; position: relative; width: 24px; height: 24px; cursor: pointer; }
+.mock-icon-button svg, .mock-inline-link svg, .mock-trust-icon svg, .mock-contact-item svg, .mock-info-icon svg, .mock-faq-item svg, .mock-heart-button svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mock-cart-count { position: absolute; right: -8px; top: -8px; display: flex; min-width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 999px; background: var(--mock-text); padding-inline: 4px; font-size: 10px; font-weight: 700; color: #fff; }
+.mock-menu-button { display: inline-flex; }
+.mock-hero-section { margin-top: 16px; }
+.mock-hero-card, .mock-surface-card { border: 1px solid var(--mock-border); border-radius: 28px; background: var(--mock-surface); box-shadow: var(--mock-shadow); }
+.mock-hero-card { background: var(--mock-accent); padding: 64px 24px; text-align: center; }
+.mock-hero-card h1 { max-width: 540px; margin: 0 auto; font-size: clamp(2.8rem, 12vw, 4.5rem); line-height: .95; letter-spacing: -0.06em; font-weight: 900; }
+.mock-hero-card p { max-width: 480px; margin: 20px auto 0; font-size: 1rem; line-height: 1.75; color: rgba(15, 23, 42, .85); }
+.mock-primary-button { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 16px; background: var(--mock-accent); color: #fff; font-size: 1rem; font-weight: 700; padding: 0 24px; min-height: 48px; cursor: pointer; }
+.mock-primary-button--light { margin-top: 32px; background: #fff; color: var(--mock-text); min-height: 56px; padding-inline: 32px; font-size: 1.125rem; }
+.mock-trust-section { padding: 24px 16px 28px; }
+.mock-trust-grid, .mock-info-grid { display: grid; gap: 12px; }
+.mock-trust-card, .mock-info-card { border: 1px solid var(--mock-border); border-radius: 16px; background: var(--mock-surface); }
+.mock-trust-card { display: flex; align-items: center; gap: 12px; padding: 16px; }
+.mock-trust-icon, .mock-info-icon { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 12px; background: var(--mock-accent-soft); color: var(--mock-text); }
+.mock-trust-card p, .mock-info-card p { margin: 0; font-size: .875rem; font-weight: 700; color: #1e293b; }
+.mock-products-section, .mock-page-section { padding-bottom: 44px; }
+.mock-section-heading, .mock-shop-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.mock-section-heading h2, .mock-shop-heading h1, .mock-page-title { margin: 0; color: var(--mock-text); letter-spacing: -0.04em; font-weight: 900; }
+.mock-section-heading h2 { font-size: 1.875rem; }
+.mock-shop-heading h1, .mock-page-title { font-size: 2.25rem; }
+.mock-shop-heading p, .mock-page-subtitle { margin: 8px 0 0; color: #64748b; font-size: 1rem; }
+.mock-inline-link { display: inline-flex; align-items: center; gap: 4px; font-size: .875rem; font-weight: 700; color: #334155; }
+.mock-inline-link span { display: inline-flex; width: 16px; height: 16px; }
+.mock-pill-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 999px; background: var(--mock-accent-soft); padding: 8px 16px; color: var(--mock-text); font-size: .875rem; font-weight: 700; white-space: nowrap; }
+.mock-product-grid { display: grid; gap: 20px; align-items: stretch; }
+.mock-product-card { overflow: hidden; border: 1px solid var(--mock-border); border-radius: 24px; background: var(--mock-surface); box-shadow: var(--mock-shadow); }
+.mock-product-card { display: flex; flex-direction: column; min-height: 100%; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.mock-product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08); border-color: #cbd5e1; }
+.mock-product-card__open { width: 100%; border: none; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+.mock-product-card__open { display: block; flex: 1; }
+.mock-product-card__media-wrap { background: #f8fafc; padding: 20px; }
+.mock-product-card__media { overflow: hidden; border-radius: 20px; background: #fff; }
+.mock-product-card__media img { width: 100%; height: 252px; object-fit: cover; }
+.mock-product-card__body { padding: 0 20px 18px; }
+.mock-product-card__body { display: flex; flex-direction: column; gap: 8px; }
+.mock-product-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mock-product-card h3 { margin: 0; font-size: 1.5rem; line-height: 1.15; font-weight: 700; color: var(--mock-text); }
+.mock-heart-button { width: 36px; height: 36px; border: 1px solid var(--mock-border); border-radius: 999px; background: transparent; color: #64748b; display: inline-flex; align-items: center; justify-content: center; }
+.mock-heart-button span { width: 16px; height: 16px; }
+.mock-product-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.mock-product-card__price, .mock-product-price { font-size: 1.25rem; font-weight: 700; color: var(--mock-text); }
+.mock-product-card__cta { padding: 0 20px 20px; margin-top: auto; }
+.mock-product-card__cta .mock-primary-button { width: 100%; min-height: 48px; border-radius: 16px; }
+.mock-primary-button { transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+.mock-primary-button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); }
+.mock-primary-button:disabled { opacity: .75; cursor: default; transform: none; }
+.mock-product-layout { overflow: hidden; display: grid; border: 1px solid var(--mock-border); border-radius: 28px; background: var(--mock-surface); box-shadow: var(--mock-shadow); align-items: start; }
+.mock-product-media-column { background: #f8fafc; padding: 20px; }
+.mock-product-media-frame { overflow: hidden; border-radius: 24px; background: #fff; }
+.mock-product-media-frame img { width: 100%; height: 360px; object-fit: cover; }
+.mock-product-content { padding: 20px; }
+.mock-product-content h1 { margin: 0; font-size: 2.25rem; line-height: 1; letter-spacing: -0.05em; font-weight: 900; }
+.mock-product-price { margin-top: 16px; font-size: 1.875rem; font-weight: 900; }
+.mock-detail-list, .mock-check-list, .mock-product-reassurance { display: grid; gap: 8px; margin-top: 16px; color: #475569; font-size: 1rem; }
+.mock-color-row { display: flex; gap: 12px; margin-top: 24px; }
+.mock-color-swatch { width: 44px; height: 44px; border-radius: 12px; border: 2px solid #cbd5e1; }
+.mock-color-swatch { cursor: pointer; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.mock-color-swatch:hover { transform: translateY(-1px); }
+.mock-color-swatch.is-selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08); }
+.mock-qty-control { display: inline-flex; align-items: center; margin-top: 20px; overflow: hidden; border: 1px solid var(--mock-border); border-radius: 12px; background: #fff; }
+.mock-qty-control button, .mock-qty-control span { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; min-height: 50px; border: none; background: transparent; }
+.mock-qty-control span { font-size: 1.125rem; font-weight: 700; }
+.mock-qty-control button { cursor: pointer; }
+.mock-qty-control button span { width: 16px; height: 16px; }
+.mock-qty-control button:hover { background: #f8fafc; }
+.mock-product-description { margin-top: 28px; }
+.mock-product-description h2, .mock-summary-title { margin: 0; font-size: 1.5rem; font-weight: 900; color: var(--mock-text); }
+.mock-product-description p { margin: 12px 0 0; color: #475569; font-size: 1.125rem; line-height: 1.78; }
+.mock-product-buy { margin-top: 32px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 1.25rem; font-weight: 700; }
+.mock-two-column-layout { display: grid; gap: 24px; }
+.mock-surface-card__content { padding: 20px; }
+.mock-cart-list { display: grid; gap: 16px; margin-top: 22px; }
+.mock-cart-item { display: flex; align-items: center; gap: 16px; border: 1px solid var(--mock-border); border-radius: 16px; padding: 16px; }
+.mock-cart-item img { width: 96px; height: 96px; border-radius: 16px; object-fit: cover; }
+.mock-cart-item__body { min-width: 0; flex: 1; }
+.mock-cart-item h3 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.mock-cart-item p { margin: 4px 0 0; color: #64748b; }
+.mock-cart-item strong { display: block; margin-top: 4px; font-size: 1.125rem; }
+.mock-cart-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.mock-cart-qty-control { display: inline-flex; align-items: center; gap: 0; margin-top: 0; border: 1px solid var(--mock-border); border-radius: 12px; overflow: hidden; background: #fff; }
+.mock-cart-qty-control button, .mock-cart-qty-control span { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; border: none; background: transparent; }
+.mock-cart-qty-control button { cursor: pointer; color: var(--mock-text); position: relative; z-index: 1; }
+.mock-cart-qty-control span { min-width: 44px; color: var(--mock-text); font-weight: 700; }
+.mock-cart-qty-control button + span, .mock-cart-qty-control span + button { border-left: 1px solid var(--mock-border); }
+.mock-cart-qty-control button:hover { background: #f8fafc; }
+.mock-cart-qty-control svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.mock-cart-remove { border: none; background: transparent; color: #475569; font-size: .875rem; font-weight: 700; padding: 0; cursor: pointer; }
+.mock-cart-remove:hover { color: var(--mock-text); }
+.mock-summary-card { height: fit-content; }
+.mock-summary-lines { display: grid; gap: 12px; margin-top: 18px; font-size: 1.125rem; }
+.mock-summary-line, .mock-summary-mini-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mock-summary-line--total { border-top: 1px solid var(--mock-border); padding-top: 16px; font-size: 1.5rem; font-weight: 900; }
+.mock-summary-note { margin-top: 16px; color: #475569; font-size: .875rem; font-weight: 700; }
+.mock-summary-button { width: 100%; min-height: 56px; margin-top: 24px; border-radius: 16px; font-size: 1.25rem; font-weight: 700; }
+.mock-checkout-form { display: grid; gap: 16px; margin-top: 22px; }
+.mock-input, .mock-textarea { width: 100%; border: 1px solid var(--mock-border); border-radius: 12px; background: #fff; color: var(--mock-text); padding: 0 16px; }
+.mock-input { min-height: 48px; }
+.mock-textarea { min-height: 112px; padding-top: 14px; padding-bottom: 14px; resize: vertical; }
+.mock-span-2 { grid-column: span 1; }
+.mock-payment-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; border: 1px solid var(--mock-border); border-radius: 16px; background: #f8fafc; padding: 16px; }
+.mock-payment-card__title { margin: 0; font-size: 1.125rem; font-weight: 700; }
+.mock-payment-card__subtitle { margin: 4px 0 0; color: #64748b; }
+.mock-submit-button { margin-top: 32px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 1.25rem; }
+.mock-summary-mini-list { display: grid; gap: 12px; margin-top: 16px; }
+.mock-summary-mini-line { font-size: .875rem; }
+.mock-summary-mini-line span:first-child { max-width: 180px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mock-summary-mini-line strong { color: var(--mock-text); }
+.mock-simple-content { padding: 24px; }
+.mock-info-grid, .mock-faq-list, .mock-contact-grid { margin-top: 30px; }
+.mock-info-card { padding: 20px; }
+.mock-info-card p { margin-top: 12px; }
+.mock-faq-list { display: grid; gap: 16px; }
+.mock-faq-item { display: flex; gap: 12px; border: 1px solid var(--mock-border); border-radius: 16px; padding: 20px; }
+.mock-faq-item span { width: 20px; height: 20px; margin-top: 4px; color: #334155; }
+.mock-faq-item h3 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.mock-faq-item p { margin: 8px 0 0; color: #475569; font-size: 1.125rem; line-height: 1.78; }
+.mock-contact-grid { display: grid; gap: 24px; }
+.mock-contact-list, .mock-contact-form { display: grid; gap: 16px; }
+.mock-contact-item { display: flex; align-items: center; gap: 12px; border-radius: 16px; background: #f8fafc; padding: 16px; }
+.mock-contact-item span:first-child { width: 20px; height: 20px; }
+.mock-form-status { margin: 0; color: #334155; font-size: .95rem; font-weight: 700; }
+.mock-footer { margin-top: 32px; border-top: 1px solid var(--mock-border); background: #fff; }
+.mock-footer__grid { display: grid; gap: 32px; padding: 38px 16px 40px; }
+.mock-footer__grid > div { display: grid; align-content: start; gap: 0; align-items: start; }
+.mock-footer h3, .mock-footer h4 { margin: 0; color: var(--mock-text); }
+.mock-footer h3 { font-size: 1.5rem; font-weight: 900; }
+.mock-footer p { margin: 0; color: #64748b; font-size: .875rem; line-height: 1.75; }
+.mock-footer__links { display: grid; gap: 8px; margin-top: 13px; }
+.mock-empty-state { padding: 24px; color: #64748b; }
+.mock-empty-state p { margin: 0; }
+.mock-empty-button { margin-top: 16px; min-height: 46px; padding-inline: 22px; }
+.mock-auth-card { max-width: 520px; margin: 0 auto; }
+.mock-auth-form { display: grid; gap: 12px; margin-top: 24px; }
+.mock-auth-form .mock-primary-button { width: 100%; margin-top: 4px; }
+@media (min-width: 768px) {
+  .mock-container { padding-inline: 24px; }
+  .mock-nav { display: flex; }
+  .mock-menu-button { display: none; }
+  .mock-header__inner { padding: 15px 0; }
+  .mock-hero-card { padding: 96px 40px; }
+  .mock-hero-card h1 { font-size: 4.5rem; }
+  .mock-hero-card p { font-size: 1.125rem; }
+  .mock-trust-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mock-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-product-card__media img { height: 318px; }
+  .mock-product-layout { grid-template-columns: 1.05fr 0.95fr; }
+  .mock-product-media-frame img { height: 620px; }
+  .mock-product-content { padding: 28px; }
+  .mock-product-content h1 { font-size: 3rem; }
+  .mock-two-column-layout { grid-template-columns: minmax(0, 1fr) 360px; }
+  .mock-checkout-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-span-2 { grid-column: span 2; }
+  .mock-info-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mock-contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-footer__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 40px 24px 42px; }
+}
+@media (min-width: 1280px) {
+  .mock-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mock-product-card__media img { height: 316px; }
+}
+
+.mock-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid var(--mock-border);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--mock-text);
+  padding: 0 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+.mock-secondary-button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+.mock-admin-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.mock-admin-toolbar h1 {
+  margin-bottom: 0;
+}
+.mock-admin-note {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: .95rem;
+  line-height: 1.7;
+}
+.mock-admin-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.mock-admin-stack {
+  display: grid;
+  gap: 24px;
+}
+.mock-admin-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+.mock-admin-field {
+  display: grid;
+  gap: 8px;
+  color: var(--mock-text);
+  font-size: .95rem;
+  font-weight: 700;
+}
+.mock-admin-fields {
+  display: grid;
+  gap: 16px;
+}
+.mock-admin-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-size: .95rem;
+  font-weight: 600;
+}
+.mock-admin-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.mock-admin-actions-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mock-admin-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: .875rem;
+  font-weight: 700;
+  background: var(--mock-accent-soft);
+  color: var(--mock-text);
+}
+.mock-admin-status[data-tone="error"] {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+}
+.mock-admin-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+.mock-admin-empty {
+  margin: 0;
+  color: #64748b;
+}
+.mock-admin-product {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--mock-border);
+  border-radius: 20px;
+  background: #fff;
+  padding: 16px;
+}
+.mock-admin-product__media {
+  width: 100%;
+  max-width: 112px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+.mock-admin-product__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mock-admin-product__body {
+  display: grid;
+  gap: 10px;
+}
+.mock-admin-product__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mock-admin-product__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--mock-text);
+}
+.mock-admin-product__meta {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: .925rem;
+}
+.mock-admin-product__meta p {
+  margin: 0;
+}
+.mock-admin-product__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.mock-admin-upload-preview {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 240px);
+  padding: 12px;
+  border: 1px solid var(--mock-border);
+  border-radius: 16px;
+  background: #fff;
+}
+.mock-admin-upload-preview img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.mock-admin-upload-preview p {
+  margin: 0;
+  color: #475569;
+  font-size: .875rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.mock-admin-section-title {
+  margin: 0;
+  color: var(--mock-text);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+.mock-account-profile {
+  display: grid;
+  gap: 20px;
+  margin-top: 20px;
+}
+.mock-account-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mock-account-cart-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+.mock-account-order-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+.mock-account-order {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--mock-border);
+  border-radius: 20px;
+  background: #fff;
+  padding: 18px;
+}
+.mock-account-order__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.mock-account-order__top h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.mock-account-order__top p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: .95rem;
+}
+.mock-account-order__items {
+  display: grid;
+  gap: 12px;
+}
+.mock-account-order__item {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.mock-account-order__item img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+.mock-account-order__item p {
+  margin: 0;
+  font-weight: 700;
+  color: var(--mock-text);
+}
+.mock-account-order__item span,
+.mock-account-note {
+  color: #64748b;
+  font-size: .925rem;
+  line-height: 1.65;
+}
+@media (min-width: 768px) {
+  .mock-admin-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mock-admin-field--full {
+    grid-column: span 2;
+  }
+  .mock-admin-product {
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: start;
+  }
+}

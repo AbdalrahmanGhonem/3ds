@@ -1,50 +1,42 @@
 [
   {
-    "id": "cube",
-    "name": "Neon Cube Keychain",
+    "id": 1,
+    "slug": "gray-shark-keychain",
+    "name": "Gray Shark Keychain",
     "price": 300,
-    "description": "Matte neon finish with beveled edges and stainless split ring.",
-    "image": "assets/hero-keychain.svg",
+    "color": "Gray",
+    "image": "assets/products/gray-shark-keychain.jpg",
+    "description": "High-quality flexible 3D printed shark keychain, perfect for everyday use.",
     "featured": true
   },
   {
-    "id": "ring",
-    "name": "Orbit Ring",
+    "id": 2,
+    "slug": "cute-dog-keychain",
+    "name": "Cute Dog Keychain",
     "price": 300,
-    "description": "Dual-color orbit design with floating core and glossy highlights.",
-    "image": "assets/hero-keychain.svg",
+    "color": "White",
+    "image": "assets/products/cute-dog-keychain.jpg",
+    "description": "Adorable articulated dog keychain with smooth flexible joints.",
     "featured": true
   },
   {
-    "id": "mono",
-    "name": "Monogram Block",
+    "id": 3,
+    "slug": "articulated-raccoon-keychain",
+    "name": "Articulated Raccoon Keychain",
     "price": 300,
-    "description": "Personalized block letters with recessed engraving.",
-    "image": "assets/hero-keychain.svg",
+    "color": "Gray",
+    "image": "assets/products/articulated-raccoon-keychain.jpg",
+    "description": "Flexible raccoon keychain with detailed 3D printed design.",
     "featured": true
   },
   {
-    "id": "retro",
-    "name": "Retro Badge",
+    "id": 4,
+    "slug": "flexible-chameleon-keychain",
+    "name": "Flexible Chameleon Keychain",
     "price": 300,
-    "description": "Throwback badge silhouette with soft-touch finish.",
-    "image": "assets/hero-keychain.svg",
-    "featured": false
-  },
-  {
-    "id": "metallic",
-    "name": "Metallic Edge",
-    "price": 300,
-    "description": "Edge-highlighted form with metallic accents.",
-    "image": "assets/hero-keychain.svg",
-    "featured": false
-  },
-  {
-    "id": "glyph",
-    "name": "Glyph Tag",
-    "price": 300,
-    "description": "Minimal tag with etched glyph and satin texture.",
-    "image": "assets/hero-keychain.svg",
-    "featured": false
+    "color": "Teal",
+    "image": "assets/products/flexible-chameleon-keychain.jpg",
+    "description": "Colorful articulated chameleon keychain with a fun flexible body.",
+    "featured": true
   }
 ]

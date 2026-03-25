@@ -1,0 +1,147 @@
+﻿<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>3DS - Manage Products</title>
+    <meta name="description" content="Manage store products for 3DS.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/mockup.css?v=3">
+  </head>
+  <body class="mockup-site" data-page="admin-products">
+    <div class="mock-shell">
+      <header class="mock-header">
+        <div class="mock-container mock-header__inner">
+          <a href="index.html" class="mock-brand">3DS</a>
+          <nav class="mock-nav" aria-label="Primary">
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="about.html">About</a>
+            <a href="faq.html">FAQ</a>
+            <a href="contact.html">Contact</a>
+          </nav>
+          <div class="mock-header__icons">
+            <button class="mock-icon-button" type="button" aria-label="Search"><span data-icon="search"></span></button>
+            <button class="mock-icon-button" type="button" aria-label="Account"><span data-icon="user"></span></button>
+            <a href="cart.html" class="mock-icon-button mock-cart-link" aria-label="Cart"><span data-icon="cart"></span><span class="mock-cart-count" data-cart-count>0</span></a>
+            <button class="mock-icon-button mock-menu-button" type="button" aria-label="Menu"><span data-icon="menu"></span></button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="mock-container mock-page-section">
+          <article class="mock-surface-card">
+            <div class="mock-surface-card__content mock-simple-content">
+              <div class="mock-admin-toolbar">
+                <div>
+                  <h1 class="mock-page-title">Manage Products</h1>
+                  <p class="mock-page-subtitle">Add, edit, and delete products without changing the storefront layout.</p>
+                </div>
+                <div class="mock-admin-actions-row">
+                  <span class="mock-pill-badge" data-admin-mode-badge>Loading...</span>
+                  <a href="login.html" class="mock-secondary-button" data-auth-link>Log in</a>
+                </div>
+              </div>
+              <p class="mock-admin-note" data-admin-note>Checking the current product source.</p>
+
+              <form id="admin-product-form" class="mock-admin-form">
+                <div class="mock-admin-fields">
+                  <label class="mock-admin-field">
+                    <span>Product Name</span>
+                    <input class="mock-input" type="text" name="name" placeholder="Gray Shark Keychain" required>
+                  </label>
+                  <label class="mock-admin-field">
+                    <span>Slug</span>
+                    <input class="mock-input" type="text" name="slug" placeholder="gray-shark-keychain">
+                  </label>
+                  <label class="mock-admin-field">
+                    <span>Price</span>
+                    <input class="mock-input" type="number" name="price" min="0" step="1" placeholder="300" required>
+                  </label>
+                  <label class="mock-admin-field">
+                    <span>Color</span>
+                    <input class="mock-input" type="text" name="color" placeholder="Gray">
+                  </label>
+                  <label class="mock-admin-field mock-admin-field--full">
+                    <span>Product Image</span>
+                    <input class="mock-input" type="file" id="imageFile" accept="image/*">
+                    <input type="hidden" name="image" id="imagePath" required>
+                    <p class="mock-admin-hint">Upload an image from your device. The saved product will keep the uploaded file path automatically.</p>
+                    <div class="mock-admin-upload-preview" data-image-preview hidden>
+                      <img src="" alt="" data-image-preview-image>
+                      <p data-image-preview-path></p>
+                    </div>
+                  </label>
+                  <label class="mock-admin-field mock-admin-field--full">
+                    <span>Description</span>
+                    <textarea class="mock-textarea" name="description" placeholder="High-quality flexible 3D printed shark keychain, perfect for everyday use." required></textarea>
+                  </label>
+                </div>
+
+                <label class="mock-admin-checkbox">
+                  <input type="checkbox" name="featured">
+                  <span>Featured product</span>
+                </label>
+
+                <div class="mock-admin-actions-row">
+                  <button class="mock-primary-button" type="submit" data-form-action>Add Product</button>
+                  <button class="mock-secondary-button" type="button" data-reset-form>Reset</button>
+                </div>
+
+                <div class="mock-admin-status" data-admin-status hidden></div>
+              </form>
+            </div>
+          </article>
+        </section>
+
+        <section class="mock-container mock-page-section">
+          <article class="mock-surface-card">
+            <div class="mock-surface-card__content mock-simple-content">
+              <h2 class="mock-admin-section-title">Current Products</h2>
+              <div id="admin-product-list" class="mock-admin-list"></div>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <footer class="mock-footer">
+        <div class="mock-container mock-footer__grid">
+          <div>
+            <h3>3DS</h3>
+            <p>Premium-looking 3D printed articulated keychains made for gifting and everyday style.</p>
+          </div>
+          <div>
+            <h4>Shop</h4>
+            <div class="mock-footer__links">
+              <p>All Products</p>
+              <p>Best Sellers</p>
+              <p>New Arrivals</p>
+            </div>
+          </div>
+          <div>
+            <h4>Info</h4>
+            <div class="mock-footer__links">
+              <p>About</p>
+              <p>FAQ</p>
+              <p>Contact</p>
+            </div>
+          </div>
+          <div>
+            <h4>Support</h4>
+            <div class="mock-footer__links">
+              <p>Cash on Delivery</p>
+              <p>2-3 Day Delivery</p>
+              <p>Easy Returns</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="assets/auth.js?v=9" defer></script>
+    <script src="assets/admin-products.js?v=2" defer></script>
+  </body>
+</html>

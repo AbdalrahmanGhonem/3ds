@@ -1,164 +1,71 @@
 (() => {
-  const qs = (s, p = document) => p.querySelector(s);
-  const qsa = (s, p = document) => [...p.querySelectorAll(s)];
-
-  const baseProducts = [];
-
-  const faqs = [
-    {
-      question: {
-        en: "How long does printing take?",
-        ar: "كم يستغرق الطباعة؟"
-      },
-      answer: {
-        en: "Standard prints ship in 2-4 business days across Egypt.",
-        ar: "يتم الشحن خلال ٢-٤ أيام عمل داخل مصر."
-      }
-    },
-    {
-      question: {
-        en: "Can I add custom text?",
-        ar: "هل يمكن إضافة نص مخصص؟"
-      },
-      answer: {
-        en: "Yes, add your name or short text in the order notes.",
-        ar: "نعم، أضف الاسم أو النص القصير في ملاحظات الطلب."
-      }
-    },
-    {
-      question: {
-        en: "Which materials do you use?",
-        ar: "ما هي المواد المستخدمة؟"
-      },
-      answer: {
-        en: "Premium PLA+/PETG with durable split rings; metallic and neon finishes available.",
-        ar: "PLA+/PETG عالية الجودة مع حلقات معدنية متينة؛ تتوفر لمسات معدنية ونيوون."
-      }
-    }
-  ];
-
-  const translations = {
-    en: {
-      "theme.light": "Light",
-      "theme.dark": "Dark",
-      "holiday.on": "Holiday on",
-      "holiday.off": "Holiday off",
-      "header.keychains": "3D Keychains",
-      "navigation.home": "Home",
-      "navigation.shop": "Shop",
-      "navigation.about": "About",
-      "navigation.faq": "FAQ",
-      "navigation.contact": "Contact",
-      "hero.tagline": "3D printed in Cairo",
-      "hero.heading": "3D Printed Keychains",
-      "hero.copy": "Personalized 3D printed keychains made in Egypt with premium materials and bold finishes.",
-      "hero.primary": "Shop keychains",
-      "hero.secondary": "View collection",
-      "hero.badge_print": "Printed in Cairo",
-      "hero.badge_delivery": "Delivery in 2-4 days",
-      "hero.badge_materials": "Premium PLA+/PETG",
-      "payments.heading": "Pay securely with cards, InstaPay, or Vodafone Cash",
-      "payments.badge": "EGP only",
-      "featured.tag": "Best sellers",
-      "featured.heading": "Featured keychains",
-      "featured.copy": "Top-selling personalized 3D keychains, printed with premium materials and ready for delivery.",
-      "featured.view_all": "View all",
-      "featured.cta": "Add to cart",
-      "shop.tag": "Shop",
-      "shop.heading": "All keychains",
-      "shop.badge": "Hover to preview",
-      "story.tag": "Our story",
-      "story.heading": "Bold, durable, personal.",
-      "story.copy": "We design and 3D print keychains in Cairo with meticulous finishing, premium plastics, and quality control on every order.",
-      "story.card_one_title": "Local & fast",
-      "story.card_one_body": "Printed and shipped from Egypt with delivery updates in EN/AR.",
-      "story.card_two_title": "Custom finishes",
-      "story.card_two_body": "Matte, neon, metallic accents with durable split rings.",
-      "faq.tag": "FAQ",
-      "faq.heading": "Questions, answered.",
-      "faq.copy": "Shipping, materials, and customization details for your 3D printed keychains.",
-      "contact.tag": "Contact us",
-      "contact.heading": "Tell us your idea.",
-      "contact.copy": "Need a bulk order or custom shape? Send us a note and we’ll reply in EN or AR.",
-      "contact.badge": "Replies in <24h",
-      "contact.name": "Name",
-      "contact.email": "Email",
-      "contact.message": "Your message",
-      "contact.submit": "Send",
-      "footer.tagline": "Premium 3D printed keychains made in Egypt.",
-      "footer.payments": "Payments",
-      "cart.title": "Cart",
-      "cart.close": "Close",
-      "cart.total": "Total",
-      "cart.checkout": "Checkout",
-      "cart.empty": "Your cart is empty.",
-      "product.price_note": "Standard price: 300 EGP"
-    },
-    ar: {
-      "theme.light": "فاتح",
-      "theme.dark": "داكن",
-      "holiday.on": "تفعيل الأجواء",
-      "holiday.off": "إيقاف الأجواء",
-      "header.keychains": "ميداليات ثلاثية الأبعاد",
-      "navigation.home": "الرئيسية",
-      "navigation.shop": "المتجر",
-      "navigation.about": "من نحن",
-      "navigation.faq": "الأسئلة",
-      "navigation.contact": "تواصل",
-      "hero.tagline": "تصنيع ثلاثي الأبعاد في القاهرة",
-      "hero.heading": "ميداليات مطبوعة ثلاثياً",
-      "hero.copy": "ميداليات مفاتيح مخصصة مطبوعة في مصر بمواد ممتازة وتشطيبات جريئة.",
-      "hero.primary": "تسوق الميداليات",
-      "hero.secondary": "عرض المجموعة",
-      "hero.badge_print": "تصنيع في القاهرة",
-      "hero.badge_delivery": "التسليم خلال ٢-٤ أيام",
-      "hero.badge_materials": "مواد عالية الجودة",
-      "payments.heading": "ادفع ببطاقة أو إنستا باي أو فودافون كاش",
-      "payments.badge": "جنيه مصري فقط",
-      "featured.tag": "الأكثر مبيعاً",
-      "featured.heading": "ميداليات مميزة",
-      "featured.copy": "أفضل الميداليات المخصصة، مطبوعة بمواد ممتازة وجاهزة للتسليم.",
-      "featured.view_all": "عرض الكل",
-      "featured.cta": "أضف للسلة",
-      "shop.tag": "المتجر",
-      "shop.heading": "كل الميداليات",
-      "shop.badge": "معاينة عند المرور",
-      "story.tag": "قصتنا",
-      "story.heading": "جريئة، متينة، شخصية.",
-      "story.copy": "نصمم ونطبع الميداليات في القاهرة مع تشطيب دقيق ومواد ممتازة وفحص جودة لكل طلب.",
-      "story.card_one_title": "محلي وسريع",
-      "story.card_one_body": "طباعة وشحن من مصر مع تحديثات تسليم بالعربية والإنجليزية.",
-      "story.card_two_title": "تشطيبات مخصصة",
-      "story.card_two_body": "تشطيبات مطفية، نيون، أو معدنية مع حلقات متينة.",
-      "faq.tag": "الأسئلة الشائعة",
-      "faq.heading": "أسئلتك مجابة.",
-      "faq.copy": "تفاصيل الشحن والمواد والتخصيص لميدالياتك المطبوعة ثلاثياً.",
-      "contact.tag": "تواصل معنا",
-      "contact.heading": "أخبرنا فكرتك.",
-      "contact.copy": "تحتاج طلبية كبيرة أو شكل مخصص؟ أرسل لنا رسالة ونرد بالإنجليزية أو العربية.",
-      "contact.badge": "رد خلال <٢٤ ساعة",
-      "contact.name": "الاسم",
-      "contact.email": "البريد الإلكتروني",
-      "contact.message": "رسالتك",
-      "contact.submit": "إرسال",
-      "footer.tagline": "ميداليات مفاتيح مطبوعة ثلاثياً في مصر.",
-      "footer.payments": "طرق الدفع",
-      "cart.title": "السلة",
-      "cart.close": "إغلاق",
-      "cart.total": "الإجمالي",
-      "cart.checkout": "الدفع",
-      "cart.empty": "سلتك فارغة.",
-      "product.price_note": "السعر القياسي: ٣٠٠ جنيه"
-    }
-  };
+  const qs = (selector, parent = document) => parent.querySelector(selector);
+  const qsa = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 
   const FALLBACK_API_BASE = "http://localhost:4000";
   const origin = window.location?.origin;
   const API_BASE =
     window.__API_BASE ||
-    (origin && origin !== "null" && !origin.startsWith("file:")
-      ? origin
-      : FALLBACK_API_BASE);
+    (origin && origin !== "null" && !origin.startsWith("file:") ? origin : FALLBACK_API_BASE);
+
+  const CART_STORAGE_KEY = "cart";
+  const GUEST_CART_KEY = "guest_cart_token";
+  const PRODUCTS_CACHE_KEY = "products_cache_v1";
+  const DEFAULT_IMAGE = "assets/hero-keychain.svg";
+  const DEFAULT_FAQS = [
+    {
+      question: "How long does printing take?",
+      answer: "Standard prints ship in 2-4 business days across Egypt."
+    },
+    {
+      question: "Can I add custom text?",
+      answer: "Yes, add your name or short text in the order notes."
+    },
+    {
+      question: "Which materials do you use?",
+      answer: "Premium PLA+/PETG with durable split rings and clean finishing."
+    }
+  ];
+  const REFERENCE_SWATCHES = ["#d9d9d4", "#20b394", "#9c4fc3", "#6d9ead", "#6f767c"];
+  const PRODUCT_COPY_LIBRARY = [
+    {
+      match: ["raccoon", "raco"],
+      name: "Articulated Raccoon Keychain",
+      description:
+        "A high-quality 3D printed keychain with a flexible, articulated design that moves naturally. Perfect for keys, bags, and gifts."
+    },
+    {
+      match: ["shark"],
+      name: "Gray Shark Keychain",
+      description:
+        "A high-quality 3D printed shark keychain with a flexible articulated body and a clean gray finish. Perfect for keys, bags, and gifts."
+    },
+    {
+      match: ["dog"],
+      name: "Cute Dog Keychain",
+      description:
+        "A high-quality 3D printed dog keychain with a flexible articulated design and a smooth finish. Perfect for keys, bags, and gifts."
+    },
+    {
+      match: ["chameleon"],
+      name: "Multicolor Chameleon Keychain",
+      description:
+        "A high-quality 3D printed chameleon keychain with a flexible segmented design and bold color detail. Perfect for keys, bags, and gifts."
+    },
+    {
+      match: ["ankylosaurus", "dino", "dinosaur"],
+      name: "Teal Dinosaur Keychain",
+      description:
+        "A high-quality 3D printed dinosaur keychain with a flexible articulated design that moves naturally. Perfect for keys, bags, and gifts."
+    }
+  ];
+
+  const state = {
+    cart: [],
+    products: [],
+    theme: localStorage.getItem("theme") || "dark",
+    holiday: localStorage.getItem("holiday") === "1"
+  };
 
   const currentUser = () => {
     try {
@@ -175,35 +82,6 @@
       user_id: user?.id || "",
       is_admin: user?.is_admin ? "1" : "0"
     };
-  };
-
-  const CART_STORAGE_KEY = "cart";
-  const GUEST_CART_KEY = "guest_cart_token";
-  const PRODUCTS_CACHE_KEY = "products_cache_v1";
-
-  const state = {
-    lang: "en",
-    cart: [],
-    theme: "dark",
-    holiday: false,
-    products: []
-  };
-
-  const loadCart = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
-      if (Array.isArray(saved)) {
-        state.cart = saved
-          .filter((line) => line && line.id && Number(line.qty) > 0)
-          .map((line) => ({ id: String(line.id), qty: Number(line.qty) }));
-      }
-    } catch {
-      state.cart = [];
-    }
-  };
-
-  const persistCart = () => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
   };
 
   const getGuestToken = () => {
@@ -224,59 +102,75 @@
     };
   };
 
-  let cartSaveTimer = null;
-  const scheduleCartSave = () => {
-    if (cartSaveTimer) clearTimeout(cartSaveTimer);
-    cartSaveTimer = setTimeout(async () => {
-      try {
-        const items = state.cart.map((line) => ({
-          product_id: Number(line.id),
-          quantity: Number(line.qty)
-        })).filter((item) => Number.isFinite(item.product_id) && item.product_id > 0 && Number.isFinite(item.quantity) && item.quantity > 0);
-        await fetch(`${API_BASE}/api/cart`, {
-          method: "POST",
-          headers: cartHeaders(),
-          body: JSON.stringify({ items })
-        });
-      } catch (err) {
-        console.warn("Failed to save cart", err);
-      }
-    }, 300);
-  };
-
-  const syncCartFromApi = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/cart`, { headers: cartHeaders() });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      const items = Array.isArray(data?.items) ? data.items : [];
-      if (items.length) {
-        state.cart = items.map((item) => ({
-          id: String(item.product_id),
-          qty: Number(item.quantity)
-        })).filter((line) => Number.isFinite(line.qty) && line.qty > 0);
-        persistCart();
-        renderCart();
-        return;
-      }
-      if (state.cart.length) {
-        scheduleCartSave();
-      }
-    } catch (err) {
-      console.warn("Failed to load cart", err);
-    }
+  const refineProductContent = (product = {}) => {
+    const haystack = `${product.slug || ""} ${product.name || ""}`.toLowerCase();
+    const matched = PRODUCT_COPY_LIBRARY.find((entry) => entry.match.some((term) => haystack.includes(term)));
+    return {
+      name: matched?.name || product.name || "Flexible 3D Keychain",
+      description:
+        matched?.description ||
+        "A high-quality 3D printed keychain with a flexible, articulated design that moves naturally. Perfect for keys, bags, and gifts."
+    };
   };
 
   const normalizeProducts = (products = []) =>
-    products.map((p, index) => ({
-      id: String(p.id ?? p.slug ?? `prod-${Date.now()}-${index}`),
-      slug: p.slug || `prod-${Date.now()}-${index}`,
-      name: p.name || "Untitled product",
-      price: Number(p.price_egp ?? p.price ?? 0),
-      description: p.description || "",
-      image: p.image_url || p.image || "assets/hero-keychain.svg",
-      featured: Boolean(p.featured)
-    }));
+    products.map((product, index) => {
+      const refined = refineProductContent(product);
+      return {
+        id: String(product.id ?? product.slug ?? `product-${index}`),
+        slug: product.slug || String(product.id ?? `product-${index}`),
+        name: refined.name,
+        price: 300,
+        description: refined.description,
+        image: product.image_url || product.image || DEFAULT_IMAGE,
+        featured: Boolean(product.featured)
+      };
+    });
+
+  const defaultProducts = () => [
+    {
+      id: "1",
+      slug: "gray-raccoon-keychain",
+      name: "Articulated Raccoon Keychain",
+      price: 300,
+      description: "A high-quality 3D printed keychain with a flexible, articulated design that moves naturally. Perfect for keys, bags, and gifts.",
+      image: DEFAULT_IMAGE,
+      featured: true
+    },
+    {
+      id: "2",
+      slug: "multicolor-chameleon-keychain",
+      name: "Multicolor Chameleon Keychain",
+      price: 300,
+      description: "A high-quality 3D printed chameleon keychain with a flexible segmented design and bold color detail. Perfect for keys, bags, and gifts.",
+      image: DEFAULT_IMAGE,
+      featured: true
+    },
+    {
+      id: "3",
+      slug: "teal-ankylosaurus-keychain",
+      name: "Teal Dinosaur Keychain",
+      price: 300,
+      description: "A high-quality 3D printed dinosaur keychain with a flexible articulated design that moves naturally. Perfect for keys, bags, and gifts.",
+      image: DEFAULT_IMAGE,
+      featured: true
+    },
+    {
+      id: "4",
+      slug: "gray-shark-keychain",
+      name: "Gray Shark Keychain",
+      price: 300,
+      description: "A high-quality 3D printed shark keychain with a flexible articulated body and a clean gray finish. Perfect for keys, bags, and gifts.",
+      image: DEFAULT_IMAGE,
+      featured: true
+    }
+  ];
+
+  const formatMoney = (amount) => `${Number(amount || 0).toLocaleString("en-EG")} EGP`;
+
+  const persistProductsCache = (products) => {
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
+  };
 
   const loadCachedProducts = () => {
     try {
@@ -287,299 +181,40 @@
     }
   };
 
-  const persistProductsCache = (products = []) => {
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
-  };
-
-  const setProducts = (products = []) => {
-    state.products = products;
-    renderProducts();
-    renderAdminTable();
-    renderCart();
-  };
-
-  const fetchProductsFile = async () => {
-    const fetchFrom = async (base) => {
-      const res = await fetch(`${base}/api/products`, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const mapped = normalizeProducts(data);
-        persistProductsCache(mapped);
-        setProducts(mapped);
-        return;
-      }
-      throw new Error("Unexpected response shape");
-    };
-
+  const loadCart = () => {
     try {
-      await fetchFrom(API_BASE);
-      return;
-    } catch (err) {
-      if (API_BASE !== FALLBACK_API_BASE) {
-        try {
-          await fetchFrom(FALLBACK_API_BASE);
-          return;
-        } catch (fallbackErr) {
-          console.warn("Falling back to built-in products", fallbackErr);
-        }
-      } else {
-        console.warn("Falling back to built-in products", err);
+      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+      if (Array.isArray(saved)) {
+        state.cart = saved
+          .filter((line) => line && line.id && Number(line.qty) > 0)
+          .map((line) => ({ id: String(line.id), qty: Number(line.qty) }));
       }
+    } catch {
+      state.cart = [];
     }
-    const cachedProducts = loadCachedProducts();
-    if (cachedProducts.length) {
-      setProducts(cachedProducts);
-      return;
-    }
+  };
 
-    // final fallback when no API or cached products are available
-    setProducts([
-      {
-        id: "cube",
-        name: "Neon Cube Keychain",
-        price: 300,
-        description: "Matte neon finish with beveled edges and stainless split ring.",
-        image: "assets/hero-keychain.svg",
-        featured: true
-      },
-      {
-        id: "ring",
-        name: "Orbit Ring",
-        price: 300,
-        description: "Dual-color orbit design with floating core and glossy highlights.",
-        image: "assets/hero-keychain.svg",
-        featured: true
-      },
-      {
-        id: "mono",
-        name: "Monogram Block",
-        price: 300,
-        description: "Personalized block letters with recessed engraving.",
-        image: "assets/hero-keychain.svg",
-        featured: true
-      },
-      {
-        id: "retro",
-        name: "Retro Badge",
-        price: 300,
-        description: "Throwback badge silhouette with soft-touch finish.",
-        image: "assets/hero-keychain.svg",
-        featured: false
-      },
-      {
-        id: "metallic",
-        name: "Metallic Edge",
-        price: 300,
-        description: "Edge-highlighted form with metallic accents.",
-        image: "assets/hero-keychain.svg",
-        featured: false
-      },
-      {
-        id: "glyph",
-        name: "Glyph Tag",
-        price: 300,
-        description: "Minimal tag with etched glyph and satin texture.",
-        image: "assets/hero-keychain.svg",
-        featured: false
+  const persistCart = () => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
+  };
+
+  let cartSaveTimer = null;
+  const scheduleCartSave = () => {
+    if (cartSaveTimer) clearTimeout(cartSaveTimer);
+    cartSaveTimer = setTimeout(async () => {
+      try {
+        const items = state.cart
+          .map((line) => ({ product_id: Number(line.id), quantity: Number(line.qty) }))
+          .filter((item) => Number.isFinite(item.product_id) && item.product_id > 0 && item.quantity > 0);
+        await fetch(`${API_BASE}/api/cart`, {
+          method: "POST",
+          headers: cartHeaders(),
+          body: JSON.stringify({ items })
+        });
+      } catch (error) {
+        console.warn("Failed to save cart", error);
       }
-    ]);
-  };
-
-  const formatMoney = (amount) => `${amount.toLocaleString("en-EG")} EGP`;
-
-  const setLang = (lang) => {
-    state.lang = lang;
-    const rtl = lang === "ar";
-    document.documentElement.lang = lang;
-    document.documentElement.dir = rtl ? "rtl" : "ltr";
-    document.body.classList.toggle("rtl", rtl);
-    qs("#LanguageSelect").value = lang;
-    qsa("[data-i18n]").forEach((el) => {
-      const key = el.dataset.i18n;
-      const value = translations[lang]?.[key];
-      if (value) el.textContent = value;
-    });
-    qsa("[data-i18n-placeholder]").forEach((el) => {
-      const key = el.dataset.i18nPlaceholder;
-      const value = translations[lang]?.[key];
-      if (value) el.placeholder = value;
-    });
-    renderFaq();
-    renderProducts();
-    renderCart();
-    updateHolidayLabel();
-  };
-
-  const setTheme = (theme) => {
-    state.theme = theme;
-    const label = qs("[data-theme-label]");
-    document.body.classList.toggle("light", theme === "light");
-    if (label) {
-      const key = theme === "light" ? "theme.dark" : "theme.light";
-      label.textContent = translations[state.lang]?.[key] || (theme === "light" ? "Dark" : "Light");
-    }
-    localStorage.setItem("theme", theme);
-  };
-
-  const updateHolidayLabel = () => {
-    const label = qs("[data-holiday-label]");
-    if (!label) return;
-    const key = state.holiday ? "holiday.off" : "holiday.on";
-    label.textContent = translations[state.lang]?.[key] || (state.holiday ? "Holiday off" : "Holiday on");
-  };
-
-  let snowActive = false;
-  const startSnow = () => {
-    const layer = qs("[data-snow]");
-    if (!layer || snowActive) return;
-    snowActive = true;
-    const count = 60;
-    layer.innerHTML = "";
-    for (let i = 0; i < count; i += 1) {
-      const flake = document.createElement("div");
-      flake.className = "snowflake";
-      flake.textContent = "*";
-      const size = Math.random() * 8 + 6; // 6-14px
-      const duration = Math.random() * 8 + 8; // 8-16s
-      const delay = Math.random() * -12; // start mid-fall
-      const drift = Math.random() * 30 - 15;
-      flake.style.left = `${Math.random() * 100}%`;
-      flake.style.fontSize = `${size}px`;
-      flake.style.animationDuration = `${duration}s`;
-      flake.style.animationDelay = `${delay}s`;
-      flake.style.setProperty("--drift", `${drift}px`);
-      layer.appendChild(flake);
-    }
-  };
-
-  const stopSnow = () => {
-    const layer = qs("[data-snow]");
-    if (layer) layer.innerHTML = "";
-    snowActive = false;
-  };
-
-  const setHoliday = (enabled) => {
-    state.holiday = enabled;
-    document.body.classList.toggle("holiday", enabled);
-    enabled ? startSnow() : stopSnow();
-    updateHolidayLabel();
-    localStorage.setItem("holiday", enabled ? "1" : "0");
-  };
-
-  const renderProducts = () => {
-    const featuredWrap = qs("#featured-grid");
-    const productWrap = qs("#product-grid");
-    if (!featuredWrap || !productWrap) return;
-    featuredWrap.innerHTML = "";
-    productWrap.innerHTML = "";
-
-    const templateCard = (product) => {
-      const card = document.createElement("article");
-      card.className = "card product-card animate";
-      card.innerHTML = `
-        <div class="hero-visual" style="padding: 12px;">
-          <img src="${product.image}" alt="${product.name}">
-        </div>
-        <div class="product-info">
-          <div>
-            <strong>${product.name}</strong>
-            <div class="price">${formatMoney(product.price)}</div>
-          </div>
-          <button class="button secondary" type="button" data-add="${product.id}" data-i18n="featured.cta">${translations[state.lang]["featured.cta"]}</button>
-        </div>
-      `;
-      return card;
-    };
-
-    state.products.filter((p) => p.featured).forEach((p) => featuredWrap.appendChild(templateCard(p)));
-    state.products.forEach((p) => productWrap.appendChild(templateCard(p)));
-
-
-    qsa("[data-add]").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        addToCart(btn.dataset.add);
-      })
-    );
-    reveal();
-  };
-
-  const addToCart = (id) => {
-    const existing = state.cart.find((line) => line.id === id);
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      const product = state.products.find((p) => p.id === id);
-      if (!product) return;
-      state.cart.push({ id, qty: 1 });
-    }
-    animateBadge();
-    renderCart(true);
-  };
-
-  const animateBadge = () => {
-    const badge = qs("[data-cart-count]");
-    if (!badge) return;
-    badge.classList.add("pulse");
-    setTimeout(() => badge.classList.remove("pulse"), 220);
-  };
-
-  const renderCart = (openDrawer = false) => {
-    const wrap = qs("#cart-lines");
-    const totalEl = qs("[data-cart-total]");
-    const countEl = qs("[data-cart-count]");
-    if (!wrap || !totalEl || !countEl) return;
-
-    wrap.innerHTML = "";
-    let total = 0;
-    let count = 0;
-    if (state.cart.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "text";
-      empty.textContent = translations[state.lang]["cart.empty"];
-      wrap.appendChild(empty);
-    } else {
-      state.cart.forEach((line) => {
-        const product = state.products.find((p) => p.id === line.id);
-        if (!product) return;
-        const lineTotal = product.price * line.qty;
-        total += lineTotal;
-        count += line.qty;
-        const row = document.createElement("div");
-        row.className = "cart-line";
-        row.innerHTML = `
-          <div>
-            <div>${product.name}</div>
-            <div class="price">${formatMoney(lineTotal)}</div>
-          </div>
-          <button type="button" class="linklike" data-remove>Remove</button>
-          <div class="qty" data-qty>
-            <button type="button" data-qty-change="-1">−</button>
-            <span data-qty-value>${line.qty}</span>
-            <button type="button" data-qty-change="1">+</button>
-          </div>
-        `;
-        row.querySelectorAll("[data-qty-change]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const delta = Number(btn.dataset.qtyChange || 0);
-            line.qty = Math.max(1, line.qty + delta);
-            renderCart();
-          });
-        });
-        row.querySelector("[data-remove]")?.addEventListener("click", () => {
-          state.cart = state.cart.filter((item) => item.id !== line.id);
-          renderCart();
-        });
-        wrap.appendChild(row);
-      });
-    }
-    totalEl.textContent = formatMoney(total);
-    countEl.textContent = count;
-    persistCart();
-    scheduleCartSave();
-    if (openDrawer && state.cart.length > 0) {
-      toggleCart(true);
-    }
+    }, 300);
   };
 
   const toggleCart = (show) => {
@@ -589,205 +224,214 @@
     drawer.setAttribute("aria-hidden", show ? "false" : "true");
   };
 
+  const animateBadge = () => {
+    const badge = qs("[data-cart-count]");
+    if (!badge) return;
+    badge.classList.add("pulse");
+    setTimeout(() => badge.classList.remove("pulse"), 220);
+  };
+
+  const addToCart = (id, quantity = 1) => {
+    const existing = state.cart.find((line) => line.id === String(id));
+    if (existing) {
+      existing.qty += quantity;
+    } else {
+      state.cart.push({ id: String(id), qty: quantity });
+    }
+    animateBadge();
+    renderCart(true);
+  };
+
+  const renderCart = (openDrawer = false) => {
+    const wrap = qs("#cart-lines");
+    const totalEl = qs("[data-cart-total]");
+    const countEls = qsa("[data-cart-count]");
+    if (!wrap || !totalEl || countEls.length === 0) return;
+
+    wrap.innerHTML = "";
+    let total = 0;
+    let count = 0;
+
+    if (state.cart.length === 0) {
+      wrap.innerHTML = '<p class="text">Your cart is empty.</p>';
+    } else {
+      state.cart.forEach((line) => {
+        const product = state.products.find((item) => item.id === line.id);
+        if (!product) return;
+        const lineTotal = product.price * line.qty;
+        total += lineTotal;
+        count += line.qty;
+
+        const row = document.createElement("div");
+        row.className = "cart-line";
+        row.innerHTML = `
+          <div>
+            <div>${product.name}</div>
+            <div class="price">${formatMoney(lineTotal)}</div>
+          </div>
+          <div class="qty">
+            <button type="button" data-qty-change="-1">-</button>
+            <span>${line.qty}</span>
+            <button type="button" data-qty-change="1">+</button>
+          </div>
+          <button type="button" class="linklike" data-remove>Remove</button>
+        `;
+
+        qsa("[data-qty-change]", row).forEach((button) => {
+          button.addEventListener("click", () => {
+            line.qty = Math.max(1, line.qty + Number(button.dataset.qtyChange || 0));
+            renderCart();
+          });
+        });
+        qs("[data-remove]", row)?.addEventListener("click", () => {
+          state.cart = state.cart.filter((item) => item.id !== line.id);
+          renderCart();
+        });
+        wrap.appendChild(row);
+      });
+    }
+
+    totalEl.textContent = formatMoney(total);
+    countEls.forEach((el) => {
+      el.textContent = String(count);
+    });
+    persistCart();
+    scheduleCartSave();
+    if (openDrawer && count > 0) toggleCart(true);
+  };
+
+  const syncCartFromApi = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/cart`, { headers: cartHeaders() });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+      if (items.length) {
+        state.cart = items
+          .map((item) => ({ id: String(item.product_id), qty: Number(item.quantity) }))
+          .filter((item) => item.qty > 0);
+        persistCart();
+        renderCart();
+      }
+    } catch (error) {
+      console.warn("Failed to load cart", error);
+    }
+  };
+
+  const getSelectedProduct = () => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("id") || params.get("slug");
+    return (
+      state.products.find((product) => product.id === requested || product.slug === requested) ||
+      state.products[0] ||
+      null
+    );
+  };
+
+  const renderHomeProducts = () => {
+    const grid = qs("#home-product-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    state.products.forEach((product) => {
+      const card = document.createElement("a");
+      card.className = "reference-product-card";
+      card.href = `shop.html?id=${encodeURIComponent(product.id)}`;
+      card.innerHTML = `
+        <div class="reference-product-card__image">
+          <img src="${product.image}" alt="${product.name}">
+        </div>
+        <div class="reference-product-card__body">
+          <p class="reference-product-card__title">${product.name}</p>
+          <div class="reference-product-card__price">${formatMoney(product.price)}</div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  };
+
+  const renderProductPage = () => {
+    const page = qs("#product-page");
+    if (!page) return;
+
+    const product = getSelectedProduct();
+    if (!product) {
+      page.innerHTML = '<p class="text" style="padding:16px;">No product found.</p>';
+      return;
+    }
+
+    page.innerHTML = `
+      <article class="product-reference-card">
+        <div class="product-reference-card__media">
+          <img src="${product.image}" alt="${product.name}">
+        </div>
+        <div class="product-reference-card__body">
+          <h1>${product.name}</h1>
+          <strong class="price">${formatMoney(product.price)}</strong>
+          <div class="product-trust-block">
+            <div>4.8/5 customer rating</div>
+            <div>Limited stock available</div>
+            <div>Delivery within 2-3 days</div>
+          </div>
+          <div class="swatch-row" aria-label="Color selection">
+            ${REFERENCE_SWATCHES.map((color, index) => `<button class="swatch${index === 0 ? " is-selected" : ""}" type="button" style="background:${color};" data-swatch aria-label="Color ${index + 1}"></button>`).join("")}
+          </div>
+          <div class="qty-control" aria-label="Quantity selector">
+            <button type="button" data-product-qty-change="-1">-</button>
+            <span data-product-qty>1</span>
+            <button type="button" data-product-qty-change="1">+</button>
+          </div>
+          <h2 class="product-reference-section-title">Description</h2>
+          <p class="product-reference-description">${product.description}</p>
+          <button class="reference-primary-button" type="button" data-product-add>Buy Now - 300 EGP</button>
+          <div class="product-reassurance-block">
+            <div>Cash on Delivery Available</div>
+            <div>Easy Returns</div>
+            <div>Trusted by 100+ customers</div>
+          </div>
+        </div>
+      </article>
+    `;
+
+    let quantity = 1;
+    qsa("[data-swatch]", page).forEach((swatch) => {
+      swatch.addEventListener("click", () => {
+        qsa("[data-swatch]", page).forEach((item) => item.classList.remove("is-selected"));
+        swatch.classList.add("is-selected");
+      });
+    });
+    qsa("[data-product-qty-change]", page).forEach((button) => {
+      button.addEventListener("click", () => {
+        quantity = Math.max(1, quantity + Number(button.dataset.productQtyChange || 0));
+        const qtyValue = qs("[data-product-qty]", page);
+        if (qtyValue) qtyValue.textContent = String(quantity);
+      });
+    });
+    qs("[data-product-add]", page)?.addEventListener("click", () => addToCart(product.id, quantity));
+  };
+
   const renderFaq = () => {
     const wrap = qs("#faq-list");
     if (!wrap) return;
     wrap.innerHTML = "";
-    faqs.forEach((item) => {
-      const q = item.question[state.lang];
-      const a = item.answer[state.lang];
+
+    DEFAULT_FAQS.forEach((item) => {
       const block = document.createElement("div");
-      block.className = "accordion-item animate";
-      block.dataset.accordion = "";
+      block.className = "accordion-item";
       block.innerHTML = `
-        <button class="accordion-header" aria-expanded="false">
-          <span>${q}</span>
-          <span aria-hidden="true">+</span>
+        <button class="accordion-header" type="button" aria-expanded="false">
+          <span>${item.question}</span>
+          <span>+</span>
         </button>
         <div class="accordion-body">
-          <p>${a}</p>
+          <p>${item.answer}</p>
         </div>
       `;
-      wrap.appendChild(block);
-    });
-    bindAccordions();
-    reveal();
-  };
-
-  const renderAdminTable = () => {
-    const wrap = qs("#product-table");
-    if (!wrap) return;
-    wrap.innerHTML = "";
-    if (state.products.length === 0) {
-      wrap.innerHTML = `<p class="text">No products yet.</p>`;
-      return;
-    }
-    state.products.forEach((product) => {
-      const row = document.createElement("div");
-      row.className = "admin-row";
-      row.innerHTML = `
-        <div>
-          <strong>${product.name}</strong>
-          <div class="text">${formatMoney(product.price)}</div>
-        </div>
-        <div class="admin-actions">
-          <button type="button" data-edit="${product.id}">Edit</button>
-          <button type="button" data-delete="${product.id}">Delete</button>
-        </div>
-      `;
-      wrap.appendChild(row);
-    });
-    qsa("[data-edit]").forEach((btn) =>
-      btn.addEventListener("click", () => loadIntoForm(btn.dataset.edit))
-    );
-    qsa("[data-delete]").forEach((btn) =>
-      btn.addEventListener("click", () => deleteProduct(btn.dataset.delete))
-    );
-  };
-
-  const resetForm = () => {
-    const form = qs("#product-form");
-    const status = qs("#form-status");
-    if (!form) return;
-    form.reset();
-    form.dataset.editing = "";
-    const action = qs("[data-form-action]");
-    if (action) action.textContent = "Save product";
-    if (status) {
-      status.hidden = true;
-      status.textContent = "";
-    }
-  };
-
-  const loadIntoForm = (id) => {
-    const form = qs("#product-form");
-    if (!form) return;
-    const product = state.products.find((p) => p.id === id);
-    if (!product) return;
-    form.name.value = product.name;
-    form.price.value = product.price;
-    form.description.value = product.description;
-    if (product.image) {
-      form.dataset.imageData = product.image;
-      setThumb(product.image);
-    }
-    form.featured.checked = !!product.featured;
-    form.dataset.editing = id;
-    const action = qs("[data-form-action]");
-    if (action) action.textContent = "Update product";
-    const status = qs("#form-status");
-    if (status) {
-      status.hidden = false;
-      status.textContent = "Editing product…";
-    }
-  };
-
-  const deleteProduct = async (id) => {
-    const ok = window.confirm("Are you sure you want to delete this product?");
-    if (!ok) return;
-    try {
-      await fetch(`${API_BASE}/api/products/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
+      qs("button", block)?.addEventListener("click", () => {
+        const open = block.classList.toggle("open");
+        qs("button", block)?.setAttribute("aria-expanded", open ? "true" : "false");
       });
-      await fetchProductsFile();
-    } catch (err) {
-      alert("Delete failed: " + err.message);
-    }
-  };
-
-  const bindForm = () => {
-    const form = qs("#product-form");
-    const reset = qs("#reset-form");
-    const status = qs("#form-status");
-    if (!form) return;
-    bindImageUpload();
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const data = new FormData(form);
-      const id = form.dataset.editing;
-      const name = data.get("name")?.toString().trim() || "Untitled";
-      const slugBase = name.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "product";
-      const slug = id ? state.products.find((p) => p.id === id)?.slug || slugBase : `${slugBase}-${Date.now()}`;
-      const payload = {
-        slug,
-        name,
-        price_egp: Number(data.get("price")) || 0,
-        description: data.get("description")?.toString().trim() || "",
-        image_url: form.dataset.imageData || "assets/hero-keychain.svg",
-        featured: data.get("featured") === "on",
-        is_active: 1
-      };
-      const method = id ? "PUT" : "POST";
-      const url = id ? `${API_BASE}/api/products/${id}` : `${API_BASE}/api/products`;
-      fetch(url, {
-        method,
-        headers: adminHeaders(),
-        body: JSON.stringify(payload)
-      })
-        .then(async (res) => {
-          const body = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(body.error || "Save failed");
-          await fetchProductsFile();
-          if (status) {
-            status.hidden = false;
-            status.textContent = "Saved!";
-          }
-          form.dataset.editing = "";
-          const action = qs("[data-form-action]");
-          if (action) action.textContent = "Save product";
-          form.reset();
-          form.dataset.imageData = "";
-        })
-        .catch((err) => {
-          if (status) {
-            status.hidden = false;
-            status.textContent = err.message;
-          } else {
-            alert(err.message);
-          }
-        });
-    });
-    reset?.addEventListener("click", resetForm);
-  };
-
-  const exportProducts = () => {
-    const blob = new Blob([JSON.stringify(state.products, null, 2)], {
-      type: "application/json"
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "products.json";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const bindImportExport = () => {
-    const exportBtn = qs("[data-export-products]");
-    const importInput = qs("[data-import-products]");
-    const importLabel = qs("[data-import-label]");
-    exportBtn?.addEventListener("click", exportProducts);
-    importInput?.addEventListener("change", (event) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const parsed = JSON.parse(reader.result);
-          if (Array.isArray(parsed)) {
-            const normalized = normalizeProducts(parsed);
-            persistProductsCache(normalized);
-            setProducts(normalized);
-            if (importLabel) importLabel.textContent = file.name;
-          } else {
-            alert("Invalid JSON file.");
-          }
-        } catch (err) {
-          alert("Could not read file.");
-        }
-      };
-      reader.readAsText(file);
+      wrap.appendChild(block);
     });
   };
 
@@ -825,180 +469,332 @@
       setThumb(dataUrl);
     };
 
-    const highlight = (on) => dropzone.classList.toggle("is-dragover", on);
-
-    ["dragenter", "dragover"].forEach((evt) =>
-      dropzone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        highlight(true);
-      })
-    );
-    ["dragleave", "drop"].forEach((evt) =>
-      dropzone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        highlight(false);
-      })
-    );
-    dropzone.addEventListener("drop", (e) => {
-      const file = e.dataTransfer.files?.[0];
-      handleFile(file);
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("is-dragover");
+      });
     });
-    input.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
-      handleFile(file);
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("is-dragover");
+      });
     });
+    dropzone.addEventListener("drop", (event) => handleFile(event.dataTransfer.files?.[0]));
+    input.addEventListener("change", (event) => handleFile(event.target.files?.[0]));
     trigger?.addEventListener("click", () => input.click());
   };
 
-  // Animation/reveal
-  const reveal = () => {
-    const nodes = qsa(".animate:not(.visible)");
-    if (!("IntersectionObserver" in window)) {
-      nodes.forEach((n) => n.classList.add("visible"));
+  const renderAdminTable = () => {
+    const wrap = qs("#product-table");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+
+    if (state.products.length === 0) {
+      wrap.innerHTML = '<p class="text">No products yet.</p>';
       return;
     }
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("visible");
-            obs.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12 }
-    );
-    nodes.forEach((n) => obs.observe(n));
+
+    state.products.forEach((product) => {
+      const row = document.createElement("div");
+      row.className = "admin-row";
+      row.innerHTML = `
+        <div>
+          <strong>${product.name}</strong>
+          <div class="text">${formatMoney(product.price)}</div>
+        </div>
+        <div class="admin-actions">
+          <button type="button" data-edit="${product.id}">Edit</button>
+          <button type="button" data-delete="${product.id}">Delete</button>
+        </div>
+      `;
+      qs("[data-edit]", row)?.addEventListener("click", () => loadIntoForm(product.id));
+      qs("[data-delete]", row)?.addEventListener("click", () => deleteProduct(product.id));
+      wrap.appendChild(row);
+    });
   };
 
-  const headerState = () => {
-    const header = qs("[data-header]");
-    if (!header) return;
-    const toggle = () => header.classList.toggle("is-scrolled", window.scrollY > 10);
-    toggle();
-    window.addEventListener("scroll", toggle, { passive: true });
+  const resetForm = () => {
+    const form = qs("#product-form");
+    const status = qs("#form-status");
+    if (!form) return;
+    form.reset();
+    form.dataset.editing = "";
+    form.dataset.imageData = "";
+    setThumb("");
+    const action = qs("[data-form-action]");
+    if (action) action.textContent = "Save product";
+    if (status) {
+      status.hidden = true;
+      status.textContent = "";
+    }
   };
 
-  const bindAccordions = () => {
-    qsa("[data-accordion]").forEach((item) => {
-      const trigger = item.querySelector("button");
-      trigger?.addEventListener("click", () => {
-        const open = item.classList.toggle("open");
-        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+  const loadIntoForm = (id) => {
+    const form = qs("#product-form");
+    const status = qs("#form-status");
+    if (!form) return;
+    const product = state.products.find((item) => item.id === id);
+    if (!product) return;
+    form.name.value = product.name;
+    form.price.value = product.price;
+    form.description.value = product.description;
+    form.featured.checked = Boolean(product.featured);
+    form.dataset.editing = product.id;
+    form.dataset.imageData = product.image;
+    setThumb(product.image);
+    const action = qs("[data-form-action]");
+    if (action) action.textContent = "Update product";
+    if (status) {
+      status.hidden = false;
+      status.textContent = "Editing product...";
+    }
+  };
+
+  const refreshProductViews = () => {
+    renderHomeProducts();
+    renderProductPage();
+    renderAdminTable();
+    renderCart();
+  };
+
+  const setProducts = (products) => {
+    state.products = normalizeProducts(products);
+    refreshProductViews();
+  };
+
+  const fetchProducts = async () => {
+    const fetchFrom = async (base) => {
+      const response = await fetch(`${base}/api/products`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error("Unexpected response shape");
+      return normalizeProducts(data);
+    };
+
+    try {
+      const products = await fetchFrom(API_BASE);
+      persistProductsCache(products);
+      setProducts(products);
+      return;
+    } catch (error) {
+      console.warn("Primary product fetch failed", error);
+    }
+
+    if (API_BASE !== FALLBACK_API_BASE) {
+      try {
+        const products = await fetchFrom(FALLBACK_API_BASE);
+        persistProductsCache(products);
+        setProducts(products);
+        return;
+      } catch (error) {
+        console.warn("Fallback product fetch failed", error);
+      }
+    }
+
+    const cached = loadCachedProducts();
+    if (cached.length) {
+      setProducts(cached);
+      return;
+    }
+
+    setProducts(defaultProducts());
+  };
+
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/products/${id}`, {
+        method: "DELETE",
+        headers: adminHeaders()
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await fetchProducts();
+    } catch (error) {
+      alert(`Delete failed: ${error.message}`);
+    }
+  };
+
+  const bindForm = () => {
+    const form = qs("#product-form");
+    const resetButton = qs("#reset-form");
+    const status = qs("#form-status");
+    if (!form) return;
+
+    bindImageUpload();
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const editingId = form.dataset.editing;
+      const name = String(data.get("name") || "Untitled product").trim();
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `product-${Date.now()}`;
+      const payload = {
+        slug,
+        name,
+        price_egp: Number(data.get("price")) || 300,
+        description: String(data.get("description") || "").trim(),
+        image_url: form.dataset.imageData || DEFAULT_IMAGE,
+        featured: data.get("featured") === "on",
+        is_active: 1
+      };
+
+      try {
+        const response = await fetch(editingId ? `${API_BASE}/api/products/${editingId}` : `${API_BASE}/api/products`, {
+          method: editingId ? "PUT" : "POST",
+          headers: adminHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+        if (status) {
+          status.hidden = false;
+          status.textContent = "Saved!";
+        }
+        resetForm();
+        await fetchProducts();
+      } catch (error) {
+        if (status) {
+          status.hidden = false;
+          status.textContent = error.message;
+        }
+      }
+    });
+
+    resetButton?.addEventListener("click", resetForm);
+  };
+
+  const exportProducts = () => {
+    const blob = new Blob([JSON.stringify(state.products, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "products.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const bindImportExport = () => {
+    qs("[data-export-products]")?.addEventListener("click", exportProducts);
+    qs("[data-import-products]")?.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!Array.isArray(parsed)) throw new Error("Invalid JSON file");
+          const products = normalizeProducts(parsed);
+          persistProductsCache(products);
+          setProducts(products);
+          const label = qs("[data-import-label]");
+          if (label) label.textContent = file.name;
+        } catch {
+          alert("Could not read file.");
+        }
+      };
+      reader.readAsText(file);
     });
   };
 
-  const localizationSelect = () => {
-    const select = qs("[data-language-select]");
-    if (!select) return;
-    select.addEventListener("change", () => setLang(select.value));
-  };
-
-  const themeToggle = () => {
-    const btn = qs("[data-theme-toggle]");
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      const next = state.theme === "dark" ? "light" : "dark";
-      setTheme(next);
-    });
-  };
-
-  const holidayToggle = () => {
-    const btn = qs("[data-holiday-toggle]");
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      setHoliday(!state.holiday);
-    });
-  };
-
-  const cartDrawerBindings = () => {
-    qsa("[data-cart-open]").forEach((btn) => btn.addEventListener("click", () => toggleCart(true)));
-    qsa("[data-cart-close]").forEach((btn) => btn.addEventListener("click", () => toggleCart(false)));
-    qs(".cart-backdrop")?.addEventListener("click", () => toggleCart(false));
-  };
-
-  const checkoutForm = () => {
+  const bindCheckoutForm = () => {
     const form = qs("[data-checkout-form]");
     const status = qs("[data-checkout-status]");
     const paymentHint = qs("[data-payment-hint]");
     const cardFields = qs("[data-card-fields]");
     if (!form || !status) return;
-    const paymentSelect = form.querySelector("select[name=\"payment\"]");
-    const updatePaymentHint = () => {
-      if (!paymentSelect) return;
-      const value = paymentSelect.value;
-      const showTransfer = value === "instapay" || value === "vodafone";
-      if (paymentHint) paymentHint.hidden = !showTransfer;
+
+    const paymentSelect = form.querySelector('select[name="payment"]');
+    const updatePaymentState = () => {
+      const value = paymentSelect?.value || "";
+      if (paymentHint) paymentHint.hidden = !(value === "instapay" || value === "vodafone");
       if (cardFields) cardFields.hidden = value !== "card";
-      if (value === "") {
-        if (paymentHint) paymentHint.hidden = true;
-        if (cardFields) cardFields.hidden = true;
-        cardFields?.querySelectorAll("input").forEach((input) => {
-          input.value = "";
-        });
-      }
     };
-    paymentSelect?.addEventListener("change", updatePaymentHint);
-    updatePaymentHint();
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
+
+    paymentSelect?.addEventListener("change", updatePaymentState);
+    updatePaymentState();
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
       status.hidden = false;
-      if (state.cart.length === 0) {
-        status.textContent = "Add items to your cart before checkout.";
-        return;
-      }
-      status.textContent = "Order received! We will contact you shortly.";
+      status.textContent = state.cart.length ? "Order received! We will contact you shortly." : "Add items to your cart before checkout.";
+      if (state.cart.length) form.reset();
+      updatePaymentState();
+    });
+  };
+
+  const bindContactForm = () => {
+    const form = qs("#contact-form");
+    const status = qs("#contact-status");
+    if (!form || !status) return;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      status.hidden = false;
+      status.textContent = "Sent! We'll get back to you soon.";
       form.reset();
     });
   };
 
-
-  const contactForm = () => {
-    const form = qs("#contact-form");
-    const status = qs("#contact-status");
-    if (!form || !status) return;
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      status.hidden = false;
-      status.textContent = state.lang === "ar" ? "تم الإرسال! سنعود إليك قريباً." : "Sent! We’ll get back to you soon.";
+  const bindThemeToggle = () => {
+    qs("[data-theme-toggle]")?.addEventListener("click", () => {
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      document.body.classList.toggle("light", state.theme === "light");
+      localStorage.setItem("theme", state.theme);
+      const label = qs("[data-theme-label]");
+      if (label) label.textContent = state.theme === "light" ? "Dark" : "Light";
     });
   };
 
-  document.addEventListener("DOMContentLoaded", () => {
+  const bindHolidayToggle = () => {
+    qs("[data-holiday-toggle]")?.addEventListener("click", () => {
+      state.holiday = !state.holiday;
+      document.body.classList.toggle("holiday", state.holiday);
+      localStorage.setItem("holiday", state.holiday ? "1" : "0");
+      const label = qs("[data-holiday-label]");
+      if (label) label.textContent = state.holiday ? "Holiday off" : "Holiday";
+    });
+  };
+
+  const bindLanguageSelect = () => {
+    qs("[data-language-select]")?.addEventListener("change", (event) => {
+      document.documentElement.lang = event.target.value;
+      document.documentElement.dir = event.target.value === "ar" ? "rtl" : "ltr";
+    });
+  };
+
+  const bindCartDrawer = () => {
+    qsa("[data-cart-open]").forEach((button) => button.addEventListener("click", () => toggleCart(true)));
+    qsa("[data-cart-close]").forEach((button) => button.addEventListener("click", () => toggleCart(false)));
+    qs(".cart-backdrop")?.addEventListener("click", () => toggleCart(false));
+  };
+
+  const setYear = () => {
     const year = qs("[data-year]");
-    if (year) year.textContent = new Date().getFullYear();
-    headerState();
-    localizationSelect();
-    themeToggle();
-    holidayToggle();
+    if (year) year.textContent = String(new Date().getFullYear());
+  };
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    document.body.classList.toggle("light", state.theme === "light");
+    document.body.classList.toggle("holiday", state.holiday);
+    setYear();
+    bindLanguageSelect();
+    bindThemeToggle();
+    bindHolidayToggle();
+    bindCartDrawer();
     bindForm();
     bindImportExport();
-    cartDrawerBindings();
-    checkoutForm();
-    contactForm();
-    const savedTheme = localStorage.getItem("theme");
-    const savedHoliday = localStorage.getItem("holiday") === "1";
-    if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
-    setLang("en");
-    setTheme(state.theme);
-    setHoliday(savedHoliday);
+    bindCheckoutForm();
+    bindContactForm();
+    renderFaq();
     loadCart();
+    renderCart();
+
     const cachedProducts = loadCachedProducts();
     if (cachedProducts.length) {
       setProducts(cachedProducts);
     }
-    fetchProductsFile()
-      .then(() => {
-        renderAdminTable();
-        reveal();
-      })
-      .catch(() => {
-        renderAdminTable();
-        reveal();
-      });
+
+    await fetchProducts();
     syncCartFromApi();
   });
 })();

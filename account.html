@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>3DS - Log In</title>
-    <meta name="description" content="Log in to access the 3DS admin product manager.">
+    <title>3DS - My Account</title>
+    <meta name="description" content="View your 3DS account details, cart summary, and previous orders.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/mockup.css?v=3">
   </head>
-  <body class="mockup-site" data-page="login">
+  <body class="mockup-site" data-page="account">
     <div class="mock-shell">
       <header class="mock-header">
         <div class="mock-container mock-header__inner">
@@ -33,26 +33,27 @@
 
       <main>
         <section class="mock-container mock-page-section">
-          <article class="mock-surface-card mock-auth-card">
+          <div class="mock-two-column-layout">
+            <article class="mock-surface-card">
+              <div class="mock-surface-card__content">
+                <h1 class="mock-page-title">My Account</h1>
+                <div id="account-profile-content"></div>
+              </div>
+            </article>
+            <aside class="mock-surface-card mock-summary-card">
+              <div class="mock-surface-card__content">
+                <h2 class="mock-summary-title">Current Cart</h2>
+                <div id="account-cart-content"></div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="mock-container mock-page-section">
+          <article class="mock-surface-card">
             <div class="mock-surface-card__content mock-simple-content">
-              <h1 class="mock-page-title">Log In</h1>
-              <p class="mock-page-subtitle">Use your admin account to open the product management page.</p>
-
-              <form id="login-form" class="mock-auth-form">
-                <label class="mock-admin-field">
-                  <span>Email</span>
-                  <input class="mock-input" type="email" name="email" placeholder="Enter your email" autocomplete="email" required>
-                </label>
-                <label class="mock-admin-field">
-                  <span>Password</span>
-                  <input class="mock-input" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
-                </label>
-                <button class="mock-primary-button" type="submit">Log In</button>
-                <div class="mock-admin-status" id="login-status" role="status" hidden></div>
-              </form>
-
-              <p class="mock-page-subtitle" style="margin-top: 16px;"><a href="forgot-password.html">Forgot Password?</a></p>
-              <p class="mock-page-subtitle" style="margin-top: 16px;">Don't have an account? <a href="signup.html">Sign Up</a></p>
+              <h2 class="mock-admin-section-title">Previous Purchases</h2>
+              <div id="account-orders-content"></div>
             </div>
           </article>
         </section>
@@ -93,5 +94,6 @@
     </div>
 
     <script src="assets/auth.js?v=9" defer></script>
+    <script src="assets/account.js?v=1" defer></script>
   </body>
 </html>
