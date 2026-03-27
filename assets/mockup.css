@@ -213,9 +213,135 @@ button, input, textarea { font: inherit; }
   .mock-footer__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 40px 24px 42px; }
 }
 @media (max-width: 640px) {
+  .mock-container { padding-inline: 14px; }
+  .mock-header__inner { gap: 12px; padding: 11px 0 10px; }
   .mock-brand__logo {
-    height: 46px;
-    max-width: 164px;
+    height: 38px;
+    max-width: 138px;
+  }
+  .mock-header__icons { gap: 12px; }
+  .mock-icon-button { width: 22px; height: 22px; }
+  .mock-cart-count {
+    right: -7px;
+    top: -7px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+  .mock-hero-section { margin-top: 12px; }
+  .mock-hero-card, .mock-surface-card { border-radius: 22px; }
+  .mock-hero-card { padding: 38px 18px; }
+  .mock-hero-card h1 {
+    max-width: 320px;
+    font-size: clamp(2.15rem, 10.5vw, 2.85rem);
+    line-height: 0.98;
+  }
+  .mock-hero-card p {
+    max-width: 300px;
+    margin-top: 14px;
+    font-size: .95rem;
+    line-height: 1.6;
+  }
+  .mock-primary-button--light {
+    margin-top: 22px;
+    min-height: 48px;
+    padding-inline: 24px;
+    font-size: 1rem;
+  }
+  .mock-trust-section { padding: 18px 14px 24px; }
+  .mock-products-section, .mock-page-section { padding-bottom: 32px; }
+  .mock-section-heading, .mock-shop-heading {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .mock-section-heading h2 { font-size: 1.45rem; }
+  .mock-shop-heading h1, .mock-page-title { font-size: 1.75rem; }
+  .mock-shop-heading p, .mock-page-subtitle {
+    margin-top: 6px;
+    font-size: .92rem;
+  }
+  .mock-inline-link { font-size: .82rem; }
+  .mock-pill-badge {
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: .76rem;
+  }
+  .mock-product-grid { gap: 14px; }
+  .mock-product-card { border-radius: 20px; }
+  .mock-product-card__media-wrap { padding: 12px; }
+  .mock-product-card__media { border-radius: 16px; }
+  .mock-product-card__media img { height: 188px; }
+  .mock-product-card__body {
+    padding: 0 14px 12px;
+    gap: 6px;
+  }
+  .mock-product-card__top { gap: 10px; }
+  .mock-product-card h3 {
+    font-size: 1.12rem;
+    line-height: 1.2;
+  }
+  .mock-heart-button {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+  .mock-product-card__meta {
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .mock-product-card__price { font-size: 1rem; }
+  .mock-product-card__cta { padding: 0 14px 14px; }
+  .mock-product-card__cta .mock-primary-button {
+    min-height: 42px;
+    border-radius: 14px;
+    font-size: .94rem;
+  }
+  .mock-product-layout { border-radius: 22px; }
+  .mock-product-media-column { padding: 14px; }
+  .mock-product-media-frame { border-radius: 18px; }
+  .mock-product-media-frame img { height: 260px; }
+  .mock-product-content { padding: 16px; }
+  .mock-product-content h1 { font-size: 1.85rem; }
+  .mock-product-price {
+    margin-top: 10px;
+    font-size: 1.5rem;
+  }
+  .mock-detail-list, .mock-check-list, .mock-product-reassurance {
+    gap: 6px;
+    margin-top: 12px;
+    font-size: .95rem;
+  }
+  .mock-color-row {
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .mock-color-swatch {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+  .mock-qty-control { margin-top: 16px; }
+  .mock-qty-control button, .mock-qty-control span {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .mock-product-description { margin-top: 20px; }
+  .mock-product-description h2, .mock-summary-title { font-size: 1.25rem; }
+  .mock-product-description p {
+    margin-top: 10px;
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+  .mock-product-buy {
+    margin-top: 24px;
+    min-height: 50px;
+    font-size: 1.05rem;
+  }
+  .mock-footer { margin-top: 20px; }
+  .mock-footer__grid {
+    gap: 24px;
+    padding: 28px 14px 30px;
   }
 }
 @media (min-width: 1280px) {
