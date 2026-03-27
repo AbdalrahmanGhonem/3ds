@@ -219,19 +219,23 @@ button, input, textarea { font: inherit; }
   }
   .mock-header__inner {
     gap: 12px;
-    min-height: 70px;
-    padding: 16px 0 14px;
+    min-height: 72px;
+    padding: 15px 0;
     overflow: visible;
   }
   .mock-brand {
-    line-height: 0;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding-top: 2px;
     overflow: visible;
   }
   .mock-brand__logo {
+    display: block;
     width: auto;
     height: auto;
-    max-width: min(144px, 44vw);
-    max-height: 46px;
+    max-width: min(138px, 42vw);
+    max-height: 40px;
     object-fit: contain;
     object-position: center;
     overflow: visible;
