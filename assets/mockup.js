@@ -852,9 +852,14 @@
     renderCheckoutSummary();
   };
 
-  const setProducts = (products) => {
+  const setProducts = (products, source = "unknown") => {
     const catalog = resolveStorefrontCatalog(products);
     state.products = applyReferenceImages(catalog.products);
+    console.log("[storefront] final catalog before render", {
+      source,
+      count: state.products.length,
+      products: state.products
+    });
     renderTrustBar();
     renderProductGrid("#home-product-grid", featuredProducts());
     renderShopPage();
@@ -871,14 +876,14 @@
     const managedProducts = loadManagedProducts();
     const managedCatalog = resolveStorefrontCatalog(managedProducts);
     if (managedCatalog.hasRealProducts) {
-      setProducts(managedCatalog.products);
+      setProducts(managedCatalog.products, "managed-cache");
       return true;
     }
 
     const cachedProducts = loadCachedProducts();
     const cachedCatalog = resolveStorefrontCatalog(cachedProducts);
     if (cachedCatalog.hasRealProducts) {
-      setProducts(cachedCatalog.products);
+      setProducts(cachedCatalog.products, "products-cache");
       return true;
     }
 
@@ -900,7 +905,7 @@
     try {
       const products = await loadProductsFromApi(API_BASE);
       const catalog = persistRegisteredCatalog(products);
-      setProducts(catalog.products);
+      setProducts(catalog.products, `api:${API_BASE}`);
       return;
     } catch (error) {
       logProductLoadError(`primary API (${API_BASE})`, error);
@@ -910,7 +915,7 @@
       try {
         const products = await loadProductsFromApi(FALLBACK_API_BASE);
         const catalog = persistRegisteredCatalog(products);
-        setProducts(catalog.products);
+        setProducts(catalog.products, `api:${FALLBACK_API_BASE}`);
         return;
       } catch (error) {
         logProductLoadError(`fallback API (${FALLBACK_API_BASE})`, error);
@@ -921,14 +926,14 @@
     const managedCatalog = resolveStorefrontCatalog(managedProducts);
     if (managedCatalog.hasRealProducts) {
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-      setProducts(managedCatalog.products);
+      setProducts(managedCatalog.products, "managed-cache-fallback");
       return;
     }
 
     try {
       const products = await loadProductsFromJson();
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-      setProducts(products);
+      setProducts(products, "products.json-fallback");
       return;
     } catch (error) {
       logProductLoadError("JSON fallback", error);
@@ -938,7 +943,7 @@
       try {
         const products = await loadProductsFromLocalFile();
         state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-        setProducts(products);
+        setProducts(products, "local-file-fallback");
         return;
       } catch (error) {
         logProductLoadError("local file fallback", error);
@@ -949,7 +954,7 @@
     const cachedCatalog = resolveStorefrontCatalog(cachedProducts);
     if (cachedCatalog.hasRealProducts) {
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-      setProducts(cachedCatalog.products);
+      setProducts(cachedCatalog.products, "products-cache-fallback");
       return;
     }
 
