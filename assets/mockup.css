@@ -214,10 +214,27 @@ button, input, textarea { font: inherit; }
 }
 @media (max-width: 640px) {
   .mock-container { padding-inline: 14px; }
-  .mock-header__inner { gap: 12px; padding: 11px 0 10px; }
+  .mock-header {
+    overflow: visible;
+  }
+  .mock-header__inner {
+    gap: 12px;
+    min-height: 70px;
+    padding: 16px 0 14px;
+    overflow: visible;
+  }
+  .mock-brand {
+    line-height: 0;
+    overflow: visible;
+  }
   .mock-brand__logo {
-    height: 38px;
-    max-width: 138px;
+    width: auto;
+    height: auto;
+    max-width: min(144px, 44vw);
+    max-height: 46px;
+    object-fit: contain;
+    object-position: center;
+    overflow: visible;
   }
   .mock-header__icons { gap: 12px; }
   .mock-icon-button { width: 22px; height: 22px; }
@@ -268,13 +285,32 @@ button, input, textarea { font: inherit; }
     font-size: .76rem;
   }
   .mock-product-grid { gap: 14px; }
-  .mock-product-card { border-radius: 20px; }
-  .mock-product-card__media-wrap { padding: 12px; }
-  .mock-product-card__media { border-radius: 16px; }
-  .mock-product-card__media img { height: 188px; }
+  .mock-product-card {
+    overflow: hidden;
+    border-radius: 20px;
+  }
+  .mock-product-card__media-wrap {
+    padding: 10px 10px 0;
+  }
+  .mock-product-card__media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 16px;
+    padding: 10px;
+  }
+  .mock-product-card__media img {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
+  }
   .mock-product-card__body {
-    padding: 0 14px 12px;
-    gap: 6px;
+    padding: 0 12px 10px;
+    gap: 4px;
   }
   .mock-product-card__top { gap: 10px; }
   .mock-product-card h3 {
@@ -288,10 +324,10 @@ button, input, textarea { font: inherit; }
   }
   .mock-product-card__meta {
     gap: 10px;
-    margin-top: 2px;
+    margin-top: 0;
   }
   .mock-product-card__price { font-size: 1rem; }
-  .mock-product-card__cta { padding: 0 14px 14px; }
+  .mock-product-card__cta { padding: 0 12px 12px; }
   .mock-product-card__cta .mock-primary-button {
     min-height: 42px;
     border-radius: 14px;
@@ -299,8 +335,22 @@ button, input, textarea { font: inherit; }
   }
   .mock-product-layout { border-radius: 22px; }
   .mock-product-media-column { padding: 14px; }
-  .mock-product-media-frame { border-radius: 18px; }
-  .mock-product-media-frame img { height: 260px; }
+  .mock-product-media-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 12px;
+  }
+  .mock-product-media-frame img {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
+  }
   .mock-product-content { padding: 16px; }
   .mock-product-content h1 { font-size: 1.85rem; }
   .mock-product-price {
