@@ -21,7 +21,18 @@ button, input, textarea { font: inherit; }
 .mock-container { width: min(100%, 1152px); margin: 0 auto; padding-inline: 16px; }
 .mock-header { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--mock-border); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
 .mock-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0 14px; }
-.mock-brand { font-size: 1.875rem; font-weight: 900; letter-spacing: -0.04em; }
+.mock-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.mock-brand__logo {
+  width: auto;
+  height: clamp(42px, 6vw, 62px);
+  max-width: min(208px, 46vw);
+  object-fit: contain;
+}
 .mock-nav { display: none; align-items: center; gap: 24px; font-size: .875rem; font-weight: 500; color: #334155; }
 .mock-nav a.is-active { color: var(--mock-text); }
 .mock-header__icons { display: flex; align-items: center; gap: 15px; }
@@ -200,6 +211,12 @@ button, input, textarea { font: inherit; }
   .mock-info-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mock-contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mock-footer__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 40px 24px 42px; }
+}
+@media (max-width: 640px) {
+  .mock-brand__logo {
+    height: 46px;
+    max-width: 164px;
+  }
 }
 @media (min-width: 1280px) {
   .mock-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
