@@ -162,6 +162,58 @@
     return products;
   };
 
+  const buildReferenceCatalogIndex = (products = state.referenceProducts) => {
+    const bySlug = new Map();
+    const byName = new Map();
+
+    normalizeProducts(products).forEach((product) => {
+      const slug = String(product?.slug || "").trim();
+      const name = String(product?.name || "").trim().toLowerCase();
+      if (slug) bySlug.set(slug, product);
+      if (name) byName.set(name, product);
+    });
+
+    return { bySlug, byName };
+  };
+
+  const resolveReferenceCatalogProduct = (product, referenceIndex = buildReferenceCatalogIndex()) => {
+    const slug = String(product?.slug || "").trim();
+    const name = String(product?.name || "").trim().toLowerCase();
+
+    return (
+      (slug ? referenceIndex.bySlug.get(slug) : null) ||
+      (name ? referenceIndex.byName.get(name) : null) ||
+      null
+    );
+  };
+
+  const isReferenceCatalogProduct = (product, referenceIndex = buildReferenceCatalogIndex()) => {
+    const referenceProduct = resolveReferenceCatalogProduct(product, referenceIndex);
+    if (!referenceProduct) return false;
+
+    const productSlug = String(product?.slug || "").trim();
+    const productName = String(product?.name || "").trim().toLowerCase();
+    const referenceSlug = String(referenceProduct?.slug || "").trim();
+    const referenceName = String(referenceProduct?.name || "").trim().toLowerCase();
+
+    return (
+      (productSlug && referenceSlug && productSlug === referenceSlug) ||
+      (productName && referenceName && productName === referenceName)
+    );
+  };
+
+  const resolveStorefrontCatalog = (products = [], referenceProducts = state.referenceProducts) => {
+    const normalized = normalizeProducts(products);
+    const referenceIndex = buildReferenceCatalogIndex(referenceProducts);
+    const realProducts = normalized.filter((product) => !isReferenceCatalogProduct(product, referenceIndex));
+
+    return {
+      allProducts: normalized,
+      products: realProducts.length ? realProducts : normalized,
+      hasRealProducts: realProducts.length > 0
+    };
+  };
+
   const isFallbackProductImage = (value) => {
     const resolved = resolveProductImage(value);
     return !resolved || resolved === PRODUCT_IMAGE_FALLBACK;
@@ -732,7 +784,8 @@
   };
 
   const setProducts = (products) => {
-    state.products = applyReferenceImages(products);
+    const catalog = resolveStorefrontCatalog(products);
+    state.products = applyReferenceImages(catalog.products);
     renderTrustBar();
     renderProductGrid("#home-product-grid", featuredProducts());
     renderShopPage();
@@ -746,15 +799,17 @@
   };
 
   const hydrateProductsFromSafeFallback = () => {
-    const cachedProducts = loadCachedProducts();
-    if (cachedProducts.length) {
-      setProducts(cachedProducts);
+    const managedProducts = loadManagedProducts();
+    const managedCatalog = resolveStorefrontCatalog(managedProducts);
+    if (managedCatalog.hasRealProducts) {
+      setProducts(managedCatalog.products);
       return true;
     }
 
-    const managedProducts = loadManagedProducts();
-    if (managedProducts.length) {
-      setProducts(managedProducts);
+    const cachedProducts = loadCachedProducts();
+    const cachedCatalog = resolveStorefrontCatalog(cachedProducts);
+    if (cachedCatalog.hasRealProducts) {
+      setProducts(cachedCatalog.products);
       return true;
     }
 
@@ -774,8 +829,9 @@
 
     try {
       const products = await loadProductsFromApi(API_BASE);
-      persistProductsCache(products);
-      setProducts(products);
+      const catalog = resolveStorefrontCatalog(products);
+      persistProductsCache(catalog.products);
+      setProducts(catalog.products);
       return;
     } catch (error) {
       logProductLoadError(`primary API (${API_BASE})`, error);
@@ -784,8 +840,9 @@
     if (API_BASE !== FALLBACK_API_BASE) {
       try {
         const products = await loadProductsFromApi(FALLBACK_API_BASE);
-        persistProductsCache(products);
-        setProducts(products);
+        const catalog = resolveStorefrontCatalog(products);
+        persistProductsCache(catalog.products);
+        setProducts(catalog.products);
         return;
       } catch (error) {
         logProductLoadError(`fallback API (${FALLBACK_API_BASE})`, error);
@@ -793,9 +850,10 @@
     }
 
     const managedProducts = loadManagedProducts();
-    if (managedProducts.length) {
+    const managedCatalog = resolveStorefrontCatalog(managedProducts);
+    if (managedCatalog.hasRealProducts) {
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-      setProducts(managedProducts);
+      setProducts(managedCatalog.products);
       return;
     }
 
@@ -822,9 +880,10 @@
     }
 
     const cachedProducts = loadCachedProducts();
-    if (cachedProducts.length) {
+    const cachedCatalog = resolveStorefrontCatalog(cachedProducts);
+    if (cachedCatalog.hasRealProducts) {
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
-      setProducts(cachedProducts);
+      setProducts(cachedCatalog.products);
       return;
     }
 
