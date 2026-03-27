@@ -47,16 +47,37 @@ const parseConnectionUrl = (value) => {
   }
 };
 
-const connectionUrlValue = readEnvValue("DATABASE_URL", "MYSQL_URL", "MYSQL_PUBLIC_URL");
+const databaseUrlValue = readEnvValue("DATABASE_URL");
+const mysqlUrlValue = readEnvValue("MYSQL_URL");
+const mysqlPublicUrlValue = readEnvValue("MYSQL_PUBLIC_URL");
+const connectionUrlEnvName = databaseUrlValue
+  ? "DATABASE_URL"
+  : mysqlUrlValue
+    ? "MYSQL_URL"
+    : mysqlPublicUrlValue
+      ? "MYSQL_PUBLIC_URL"
+      : "";
+const connectionUrlValue = databaseUrlValue || mysqlUrlValue || mysqlPublicUrlValue;
 const connectionUrlConfig = parseConnectionUrl(connectionUrlValue);
 
-const DB_HOST = readEnvValue("DB_HOST", "MYSQLHOST") || connectionUrlConfig?.host || "localhost";
-const DB_PORT = readEnvValue("DB_PORT", "MYSQLPORT") || connectionUrlConfig?.port || "3306";
-const DB_USER = readEnvValue("DB_USER", "MYSQLUSER") || connectionUrlConfig?.user || "";
-const DB_PASSWORD = readEnvValue("DB_PASSWORD", "MYSQLPASSWORD") || connectionUrlConfig?.password || "";
-const DB_NAME = readEnvValue("DB_NAME", "MYSQLDATABASE") || connectionUrlConfig?.database || "";
+const manualConfig = {
+  host: readEnvValue("DB_HOST", "MYSQLHOST"),
+  port: readEnvValue("DB_PORT", "MYSQLPORT"),
+  user: readEnvValue("DB_USER", "MYSQLUSER"),
+  password: readEnvValue("DB_PASSWORD", "MYSQLPASSWORD"),
+  database: readEnvValue("DB_NAME", "MYSQLDATABASE")
+};
+
+const resolvedConfig = connectionUrlConfig || manualConfig;
+
+const DB_HOST = resolvedConfig.host || "localhost";
+const DB_PORT = resolvedConfig.port || "3306";
+const DB_USER = resolvedConfig.user || "";
+const DB_PASSWORD = resolvedConfig.password || "";
+const DB_NAME = resolvedConfig.database || "";
 
 const missingDebugVars = [
+  ...collectMissingOrUnresolved("DATABASE_URL", "MYSQL_URL", "MYSQL_PUBLIC_URL"),
   ...collectMissingOrUnresolved("DB_HOST", "MYSQLHOST"),
   ...collectMissingOrUnresolved("DB_PORT", "MYSQLPORT"),
   ...collectMissingOrUnresolved("DB_USER", "MYSQLUSER"),
@@ -65,7 +86,7 @@ const missingDebugVars = [
 ];
 
 if (connectionUrlValue && !connectionUrlConfig) {
-  console.warn("[db] DATABASE_URL / MYSQL_URL exists but could not be parsed.");
+  console.warn(`[db] ${connectionUrlEnvName} exists but could not be parsed.`);
 }
 
 if (missingDebugVars.length && !connectionUrlConfig) {
@@ -75,11 +96,17 @@ if (missingDebugVars.length && !connectionUrlConfig) {
 }
 
 if (connectionUrlConfig) {
-  console.log("[db] Using database connection URL env.");
+  console.log(`[db] Using ${connectionUrlEnvName} for database connection.`);
+} else if (manualConfig.host || manualConfig.port || manualConfig.user || manualConfig.password || manualConfig.database) {
+  console.log("[db] Using DB_* env vars for database connection.");
+}
+
+if ((connectionUrlConfig || DB_USER) && DB_NAME) {
+  console.log(`[db] Target database: ${DB_HOST}:${DB_PORT}/${DB_NAME}`);
 }
 
 const missingConfigMessage =
-  "Database credentials are missing or unresolved. Checked DB_* and Railway MYSQL* variables.";
+  "Database credentials are missing or unresolved. Set DATABASE_URL or DB_* variables.";
 
 const createUnavailablePool = () => {
   const error = new Error(missingConfigMessage);

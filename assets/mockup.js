@@ -4,9 +4,14 @@
 
   const FALLBACK_API_BASE = "http://localhost:4000";
   const origin = window.location?.origin;
-  const API_BASE =
-    window.__API_BASE ||
-    (origin && origin !== "null" && !origin.startsWith("file:") ? origin : FALLBACK_API_BASE);
+  const hostname = window.location?.hostname || "";
+  const isFileRuntime = window.location?.protocol === "file:";
+  const hasHttpOrigin = origin && origin !== "null" && !origin.startsWith("file:");
+  const isLocalDevelopmentHost = /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0)$/i.test(hostname);
+  const isProductionRuntime = hasHttpOrigin && !isLocalDevelopmentHost;
+  const API_BASE = isProductionRuntime
+    ? origin
+    : window.__API_BASE || (hasHttpOrigin ? origin : FALLBACK_API_BASE);
   const PRODUCT_SOURCE = "/assets/products.json";
   const PRODUCT_IMAGE_FALLBACK = "/assets/hero-keychain.svg";
 
@@ -156,7 +161,19 @@
     keys.forEach((key) => localStorage.removeItem(key));
   };
 
+  const clearPersistedProductCatalog = ({ includeVersion = false } = {}) => {
+    const keys = [
+      MANAGED_PRODUCTS_KEY,
+      PRODUCTS_CACHE_KEY,
+      ...LEGACY_MANAGED_PRODUCTS_KEYS,
+      ...LEGACY_PRODUCTS_CACHE_KEYS
+    ];
+    if (includeVersion) keys.push(PRODUCTS_CACHE_VERSION_KEY);
+    removeProductStorageKeys(keys);
+  };
+
   const persistProductsCache = (products, referenceProducts = state.referenceProducts) => {
+    if (isProductionRuntime) return;
     const catalog = resolveStorefrontCatalog(products, referenceProducts);
     if (!catalog.hasRealProducts) {
       localStorage.removeItem(PRODUCTS_CACHE_KEY);
@@ -172,6 +189,10 @@
   const persistRegisteredCatalog = (products, referenceProducts = state.referenceProducts) => {
     const catalog = resolveStorefrontCatalog(products, referenceProducts);
     if (!catalog.hasRealProducts) return catalog;
+    if (isProductionRuntime) {
+      clearPersistedProductCatalog();
+      return catalog;
+    }
 
     persistProductsCache(catalog.products, referenceProducts);
     clearManagedProductCache();
@@ -385,6 +406,9 @@
     });
   };
 
+  const productCatalogEmptyMarkup = (message) =>
+    `<div class="mock-empty-state"><p>${message}</p></div>`;
+
   const loadCart = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
@@ -590,6 +614,10 @@
   const renderProductGrid = (selector, products = state.products) => {
     const wrap = qs(selector);
     if (!wrap) return;
+    if (!products.length) {
+      wrap.innerHTML = productCatalogEmptyMarkup(state.productRefreshNotice || "No products available right now.");
+      return;
+    }
     wrap.innerHTML = products.map(productCardMarkup).join("");
     bindProductImageFallbacks(wrap);
     bindProductCardEvents(wrap);
@@ -612,12 +640,24 @@
     }
 
     if (gridWrap) {
-      gridWrap.innerHTML = state.products.map(productCardMarkup).join("");
-      bindProductImageFallbacks(gridWrap);
-      bindProductCardEvents(gridWrap);
+      if (state.products.length) {
+        gridWrap.innerHTML = state.products.map(productCardMarkup).join("");
+        bindProductImageFallbacks(gridWrap);
+        bindProductCardEvents(gridWrap);
+      } else {
+        gridWrap.innerHTML = productCatalogEmptyMarkup(state.productRefreshNotice || "No products available right now.");
+      }
     }
 
     if (!productWrap || !gridView || !productView) return;
+    if (!state.products.length) {
+      gridView.hidden = false;
+      productView.hidden = true;
+      if (productWrap) {
+        productWrap.innerHTML = productCatalogEmptyMarkup(state.productRefreshNotice || "No products available right now.");
+      }
+      return;
+    }
     if (!key) {
       gridView.hidden = false;
       productView.hidden = true;
@@ -873,6 +913,7 @@
   };
 
   const hydrateProductsFromSafeFallback = () => {
+    if (isProductionRuntime) return false;
     const managedProducts = loadManagedProducts();
     const managedCatalog = resolveStorefrontCatalog(managedProducts);
     if (managedCatalog.hasRealProducts) {
@@ -891,6 +932,24 @@
   };
 
   const fetchProducts = async () => {
+    if (isProductionRuntime) {
+      clearPersistedProductCatalog({ includeVersion: true });
+      state.referenceProducts = [];
+      state.productRefreshNotice = "";
+
+      try {
+        const products = await loadProductsFromApi(API_BASE);
+        const catalog = persistRegisteredCatalog(products, []);
+        setProducts(catalog.products, `api:${API_BASE}`);
+        return;
+      } catch (error) {
+        logProductLoadError(`production API (${API_BASE})`, error);
+        state.productRefreshNotice = "Products are temporarily unavailable. Please try again soon.";
+        setProducts([], `api-error:${API_BASE}`);
+        return;
+      }
+    }
+
     try {
       state.referenceProducts = await loadProductsFromJson();
     } catch (error) {
@@ -939,7 +998,7 @@
       logProductLoadError("JSON fallback", error);
     }
 
-    if (window.location.protocol === "file:") {
+    if (isFileRuntime) {
       try {
         const products = await loadProductsFromLocalFile();
         state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";

@@ -37,6 +37,8 @@ const BOOTSTRAP_ADMIN = {
   password: process.env.BOOTSTRAP_ADMIN_PASSWORD || "Admin1234!",
   is_admin: true
 };
+const isSeededDemoProductSlug = (slug) =>
+  SEEDED_DEMO_PRODUCT_SLUGS.includes(String(slug || "").trim().toLowerCase());
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -229,6 +231,17 @@ const logDatabaseError = (context, err, extra = {}) => {
   });
 };
 
+const logProductError = (context, err, extra = {}) => {
+  console.error(`[products] ${context}`, {
+    message: err?.message,
+    code: err?.code,
+    errno: err?.errno,
+    sqlState: err?.sqlState,
+    sqlMessage: err?.sqlMessage,
+    ...extra
+  });
+};
+
 const errorResponseForAuth = (err, fallbackMessage) => {
   if (err?.code === "ER_DUP_ENTRY") {
     return { status: 409, error: "Email already registered" };
@@ -334,9 +347,16 @@ const upload = multer({
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1");
-    res.json({ ok: true });
+    res.json({ server: "ok", db: "ok" });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error("[health] Database health check failed", {
+      message: err?.message,
+      code: err?.code,
+      errno: err?.errno,
+      sqlState: err?.sqlState,
+      sqlMessage: err?.sqlMessage
+    });
+    res.status(500).json({ server: "ok", db: "error" });
   }
 });
 
@@ -586,6 +606,7 @@ app.get("/api/products", async (_req, res) => {
     );
     res.json(rows);
   } catch (err) {
+    logProductError("load products failed", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -594,6 +615,9 @@ app.post("/api/products", requireAdmin, async (req, res) => {
   const { slug, name, description, price_egp, material, color, is_active = 1, image_url, featured = 0 } = req.body || {};
   if (!slug || !name || price_egp === undefined) {
     return res.status(400).json({ error: "slug, name, and price_egp are required" });
+  }
+  if (isSeededDemoProductSlug(slug)) {
+    return res.status(400).json({ error: "Seeded demo products are not allowed." });
   }
   try {
     const activeFlag = toDatabaseFlag(is_active);
@@ -615,6 +639,7 @@ app.post("/api/products", requireAdmin, async (req, res) => {
       featured: featuredFlag
     });
   } catch (err) {
+    logProductError("create product failed", err, { slug });
     res.status(500).json({ error: err.message });
   }
 });
@@ -624,6 +649,9 @@ app.put("/api/products/:id", requireAdmin, async (req, res) => {
   const { slug, name, description, price_egp, material, color, is_active, image_url, featured = 0 } = req.body || {};
   if (!slug || !name || price_egp === undefined) {
     return res.status(400).json({ error: "slug, name, and price_egp are required" });
+  }
+  if (isSeededDemoProductSlug(slug)) {
+    return res.status(400).json({ error: "Seeded demo products are not allowed." });
   }
   try {
     const activeFlag = toDatabaseFlag(is_active);
@@ -646,6 +674,7 @@ app.put("/api/products/:id", requireAdmin, async (req, res) => {
       featured: featuredFlag
     });
   } catch (err) {
+    logProductError("update product failed", err, { id, slug });
     res.status(500).json({ error: err.message });
   }
 });
@@ -657,6 +686,7 @@ app.delete("/api/products/:id", requireAdmin, async (req, res) => {
     if (result.affectedRows === 0) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
   } catch (err) {
+    logProductError("delete product failed", err, { id });
     res.status(500).json({ error: err.message });
   }
 });
@@ -758,6 +788,7 @@ app.post("/api/cart", async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
+    logCartError("save cart failed", err, { identifier: cartIdentifier(req) });
     res.status(500).json({ error: err.message });
   }
 });
