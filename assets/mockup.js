@@ -12,8 +12,12 @@
 
   const CART_STORAGE_KEY = "cart";
   const GUEST_CART_KEY = "guest_cart_token";
-  const MANAGED_PRODUCTS_KEY = "managed_products_v1";
-  const PRODUCTS_CACHE_KEY = "products_cache_v6";
+  const MANAGED_PRODUCTS_KEY = "managed_products_v2";
+  const PRODUCTS_CACHE_KEY = "products_cache_v7";
+  const LEGACY_MANAGED_PRODUCTS_KEYS = ["managed_products_v1"];
+  const LEGACY_PRODUCTS_CACHE_KEYS = ["products_cache_v6"];
+  const PRODUCTS_CACHE_VERSION_KEY = "storefront_products_cache_version";
+  const PRODUCTS_CACHE_VERSION = "2026-03-27-live-catalog-v1";
 
   const trustItems = [
     { icon: "truck", text: "Fast Delivery (2-3 Days)" },
@@ -134,26 +138,44 @@
   const productImageMarkup = (product) =>
     `<img src="${getProductImageSrc(product)}" alt="${product.name}" data-product-image>`;
 
+  const loadProductsFromStorageKey = (key) => {
+    try {
+      return normalizeProducts(JSON.parse(localStorage.getItem(key) || "[]"));
+    } catch {
+      return [];
+    }
+  };
+
   const loadCachedProducts = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || "[]");
-      return normalizeProducts(saved);
-    } catch {
-      return [];
-    }
+    return loadProductsFromStorageKey(PRODUCTS_CACHE_KEY);
   };
 
-  const loadManagedProducts = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(MANAGED_PRODUCTS_KEY) || "[]");
-      return normalizeProducts(saved);
-    } catch {
-      return [];
-    }
+  const loadManagedProducts = () => loadProductsFromStorageKey(MANAGED_PRODUCTS_KEY);
+
+  const removeProductStorageKeys = (keys = []) => {
+    keys.forEach((key) => localStorage.removeItem(key));
   };
 
-  const persistProductsCache = (products) => {
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(normalizeProducts(products)));
+  const persistProductsCache = (products, referenceProducts = state.referenceProducts) => {
+    const catalog = resolveStorefrontCatalog(products, referenceProducts);
+    if (!catalog.hasRealProducts) {
+      localStorage.removeItem(PRODUCTS_CACHE_KEY);
+      return;
+    }
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(catalog.products));
+  };
+
+  const clearManagedProductCache = () => {
+    removeProductStorageKeys([MANAGED_PRODUCTS_KEY, ...LEGACY_MANAGED_PRODUCTS_KEYS]);
+  };
+
+  const persistRegisteredCatalog = (products, referenceProducts = state.referenceProducts) => {
+    const catalog = resolveStorefrontCatalog(products, referenceProducts);
+    if (!catalog.hasRealProducts) return catalog;
+
+    persistProductsCache(catalog.products, referenceProducts);
+    clearManagedProductCache();
+    return catalog;
   };
 
   const parseProductPayload = (payload) => {
@@ -212,6 +234,53 @@
       products: realProducts.length ? realProducts : normalized,
       hasRealProducts: realProducts.length > 0
     };
+  };
+
+  const sanitizeCachedCatalog = (key, referenceProducts = state.referenceProducts) => {
+    const cachedProducts = loadProductsFromStorageKey(key);
+
+    if (!cachedProducts.length) {
+      localStorage.removeItem(key);
+      return [];
+    }
+
+    const catalog = resolveStorefrontCatalog(cachedProducts, referenceProducts);
+    if (!catalog.hasRealProducts) {
+      localStorage.removeItem(key);
+      return [];
+    }
+
+    localStorage.setItem(key, JSON.stringify(catalog.products));
+    return catalog.products;
+  };
+
+  const migrateStorefrontProductCache = (referenceProducts = state.referenceProducts) => {
+    const version = localStorage.getItem(PRODUCTS_CACHE_VERSION_KEY);
+    const managedKeys = [MANAGED_PRODUCTS_KEY, ...LEGACY_MANAGED_PRODUCTS_KEYS];
+    const cacheKeys = [PRODUCTS_CACHE_KEY, ...LEGACY_PRODUCTS_CACHE_KEYS];
+
+    const migratedManagedProducts =
+      managedKeys.map((key) => sanitizeCachedCatalog(key, referenceProducts)).find((products) => products.length) || [];
+    const migratedCachedProducts =
+      cacheKeys.map((key) => sanitizeCachedCatalog(key, referenceProducts)).find((products) => products.length) || [];
+
+    removeProductStorageKeys([...LEGACY_MANAGED_PRODUCTS_KEYS, ...LEGACY_PRODUCTS_CACHE_KEYS]);
+
+    if (migratedManagedProducts.length) {
+      localStorage.setItem(MANAGED_PRODUCTS_KEY, JSON.stringify(migratedManagedProducts));
+    } else {
+      localStorage.removeItem(MANAGED_PRODUCTS_KEY);
+    }
+
+    if (migratedCachedProducts.length) {
+      localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(migratedCachedProducts));
+    } else {
+      localStorage.removeItem(PRODUCTS_CACHE_KEY);
+    }
+
+    if (version !== PRODUCTS_CACHE_VERSION) {
+      localStorage.setItem(PRODUCTS_CACHE_VERSION_KEY, PRODUCTS_CACHE_VERSION);
+    }
   };
 
   const isFallbackProductImage = (value) => {
@@ -824,13 +893,13 @@
       state.referenceProducts = [];
     }
 
+    migrateStorefrontProductCache(state.referenceProducts);
     const hasSafeHydration = hydrateProductsFromSafeFallback();
     state.productRefreshNotice = "";
 
     try {
       const products = await loadProductsFromApi(API_BASE);
-      const catalog = resolveStorefrontCatalog(products);
-      persistProductsCache(catalog.products);
+      const catalog = persistRegisteredCatalog(products);
       setProducts(catalog.products);
       return;
     } catch (error) {
@@ -840,8 +909,7 @@
     if (API_BASE !== FALLBACK_API_BASE) {
       try {
         const products = await loadProductsFromApi(FALLBACK_API_BASE);
-        const catalog = resolveStorefrontCatalog(products);
-        persistProductsCache(catalog.products);
+        const catalog = persistRegisteredCatalog(products);
         setProducts(catalog.products);
         return;
       } catch (error) {
@@ -859,7 +927,6 @@
 
     try {
       const products = await loadProductsFromJson();
-      persistProductsCache(products);
       state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
       setProducts(products);
       return;
@@ -870,7 +937,6 @@
     if (window.location.protocol === "file:") {
       try {
         const products = await loadProductsFromLocalFile();
-        persistProductsCache(products);
         state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
         setProducts(products);
         return;
