@@ -57,7 +57,7 @@
 
   const resolveProductImage = (value) => {
     const raw = String(value || "").trim();
-    if (!raw) return PRODUCT_IMAGE_FALLBACK;
+    if (!raw) return "";
     if (isExternalImageUrl(raw) || isDirectImageSource(raw)) return raw;
 
     const normalized = raw.replace(/\\/g, "/");
@@ -76,10 +76,13 @@
     return `/${normalized.replace(/^\.?\//, "")}`;
   };
 
+  const getProductImageSrc = (product) => String(product?.image || "").trim() || PRODUCT_IMAGE_FALLBACK;
+
   const state = {
     products: [],
     cart: [],
-    productRefreshNotice: ""
+    productRefreshNotice: "",
+    referenceProducts: []
   };
 
   const currentUser = () => {
@@ -121,7 +124,7 @@
           name,
           price: Number(product?.price_egp ?? product?.price ?? 300) || 300,
           color: String(product?.color || ""),
-          image: resolveProductImage(product?.image_url || product?.image || PRODUCT_IMAGE_FALLBACK),
+          image: resolveProductImage(product?.image_url || product?.image),
           description: String(product?.description || "").trim(),
           featured: toBoolean(product?.featured)
         };
@@ -129,7 +132,7 @@
       .filter(Boolean);
 
   const productImageMarkup = (product) =>
-    `<img src="${String(product?.image || PRODUCT_IMAGE_FALLBACK)}" alt="${product.name}" data-product-image>`;
+    `<img src="${getProductImageSrc(product)}" alt="${product.name}" data-product-image>`;
 
   const loadCachedProducts = () => {
     try {
@@ -157,6 +160,55 @@
     const products = normalizeProducts(payload);
     if (!products.length) throw new Error("Product source is empty");
     return products;
+  };
+
+  const isFallbackProductImage = (value) => {
+    const resolved = resolveProductImage(value);
+    return !resolved || resolved === PRODUCT_IMAGE_FALLBACK;
+  };
+
+  const buildReferenceProductMap = (products = []) => {
+    const map = new Map();
+    products.forEach((product) => {
+      const image = resolveProductImage(product?.image);
+      if (!image || isFallbackProductImage(image)) return;
+
+      const slug = String(product?.slug || "").trim();
+      const id = String(product?.id || "").trim();
+      const name = String(product?.name || "").trim().toLowerCase();
+
+      if (slug) map.set(`slug:${slug}`, image);
+      if (id) map.set(`id:${id}`, image);
+      if (name) map.set(`name:${name}`, image);
+    });
+    return map;
+  };
+
+  const resolveReferenceProductImage = (product, referenceMap = new Map()) => {
+    const slug = String(product?.slug || "").trim();
+    const id = String(product?.id || "").trim();
+    const name = String(product?.name || "").trim().toLowerCase();
+
+    return (
+      (slug ? referenceMap.get(`slug:${slug}`) : "") ||
+      (id ? referenceMap.get(`id:${id}`) : "") ||
+      (name ? referenceMap.get(`name:${name}`) : "") ||
+      ""
+    );
+  };
+
+  const applyReferenceImages = (products = [], referenceProducts = state.referenceProducts) => {
+    const referenceMap = buildReferenceProductMap(referenceProducts);
+    if (!referenceMap.size) return normalizeProducts(products);
+
+    return normalizeProducts(products).map((product) => {
+      const referenceImage = resolveReferenceProductImage(product, referenceMap);
+      if (!referenceImage) return product;
+      if (!product.image || isFallbackProductImage(product.image)) {
+        return { ...product, image: referenceImage };
+      }
+      return product;
+    });
   };
 
   const logProductLoadError = (source, error) => {
@@ -680,7 +732,7 @@
   };
 
   const setProducts = (products) => {
-    state.products = normalizeProducts(products);
+    state.products = applyReferenceImages(products);
     renderTrustBar();
     renderProductGrid("#home-product-grid", featuredProducts());
     renderShopPage();
@@ -710,6 +762,13 @@
   };
 
   const fetchProducts = async () => {
+    try {
+      state.referenceProducts = await loadProductsFromJson();
+    } catch (error) {
+      console.warn("[storefront] Could not preload reference product images", error);
+      state.referenceProducts = [];
+    }
+
     const hasSafeHydration = hydrateProductsFromSafeFallback();
     state.productRefreshNotice = "";
 
