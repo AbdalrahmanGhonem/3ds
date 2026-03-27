@@ -45,6 +45,16 @@ button, input, textarea { font: inherit; }
 .mock-primary-button { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 16px; background: var(--mock-accent); color: #fff; font-size: 1rem; font-weight: 700; padding: 0 24px; min-height: 48px; cursor: pointer; }
 .mock-primary-button--light { margin-top: 32px; background: #fff; color: var(--mock-text); min-height: 56px; padding-inline: 32px; font-size: 1.125rem; }
 .mock-trust-section { padding: 24px 16px 28px; }
+.mock-store-notice {
+  margin: 16px 0 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: rgba(231, 243, 246, 0.8);
+  padding: 10px 14px;
+  color: #475569;
+  font-size: .875rem;
+  font-weight: 700;
+}
 .mock-trust-grid, .mock-info-grid { display: grid; gap: 12px; }
 .mock-trust-card, .mock-info-card { border: 1px solid var(--mock-border); border-radius: 16px; background: var(--mock-surface); }
 .mock-trust-card { display: flex; align-items: center; gap: 12px; padding: 16px; }

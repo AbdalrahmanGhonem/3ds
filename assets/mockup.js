@@ -7,8 +7,8 @@
   const API_BASE =
     window.__API_BASE ||
     (origin && origin !== "null" && !origin.startsWith("file:") ? origin : FALLBACK_API_BASE);
-  const PRODUCT_SOURCE = "assets/products.json";
-  const PRODUCT_IMAGE_FALLBACK = "assets/hero-keychain.svg";
+  const PRODUCT_SOURCE = "/assets/products.json";
+  const PRODUCT_IMAGE_FALLBACK = "/assets/hero-keychain.svg";
 
   const CART_STORAGE_KEY = "cart";
   const GUEST_CART_KEY = "guest_cart_token";
@@ -52,10 +52,34 @@
   const formatMoney = (amount) => `${Number(amount || 0).toLocaleString("en-EG")} EGP`;
   const toBoolean = (value) => value === true || value === 1 || value === "1" || String(value).toLowerCase() === "true";
   const featuredProducts = () => state.products.filter((product) => product.featured === true);
+  const isExternalImageUrl = (value) => /^(?:[a-z]+:)?\/\//i.test(String(value || "").trim());
+  const isDirectImageSource = (value) => /^(?:data:|blob:)/i.test(String(value || "").trim());
+
+  const resolveProductImage = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return PRODUCT_IMAGE_FALLBACK;
+    if (isExternalImageUrl(raw) || isDirectImageSource(raw)) return raw;
+
+    const normalized = raw.replace(/\\/g, "/");
+    if (normalized.startsWith("/")) return normalized;
+
+    const uploadsMatch = normalized.match(/(?:^|.*?)(uploads\/.+)$/i);
+    if (uploadsMatch?.[1]) {
+      return `/${uploadsMatch[1].replace(/^\/+/, "")}`;
+    }
+
+    const assetsMatch = normalized.match(/(?:^|.*?)(assets\/.+)$/i);
+    if (assetsMatch?.[1]) {
+      return `/${assetsMatch[1].replace(/^\/+/, "")}`;
+    }
+
+    return `/${normalized.replace(/^\.?\//, "")}`;
+  };
 
   const state = {
     products: [],
-    cart: []
+    cart: [],
+    productRefreshNotice: ""
   };
 
   const currentUser = () => {
@@ -97,7 +121,7 @@
           name,
           price: Number(product?.price_egp ?? product?.price ?? 300) || 300,
           color: String(product?.color || ""),
-          image: String(product?.image_url || product?.image || PRODUCT_IMAGE_FALLBACK),
+          image: resolveProductImage(product?.image_url || product?.image || PRODUCT_IMAGE_FALLBACK),
           description: String(product?.description || "").trim(),
           featured: toBoolean(product?.featured)
         };
@@ -268,6 +292,30 @@
       node.textContent = String(count);
       node.hidden = count === 0;
     });
+  };
+
+  const renderProductRefreshNotice = () => {
+    const main = qs("main");
+    if (!main) return;
+
+    let notice = qs("[data-product-refresh-notice]");
+    if (!state.productRefreshNotice) {
+      notice?.remove();
+      return;
+    }
+
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.className = "mock-container";
+      notice.dataset.productRefreshNotice = "true";
+      notice.innerHTML = '<p class="mock-store-notice" data-store-notice-text></p>';
+      main.prepend(notice);
+    }
+
+    const text = qs("[data-store-notice-text]", notice);
+    if (text) {
+      text.textContent = state.productRefreshNotice;
+    }
   };
 
   const flashAddButton = (button) => {
@@ -642,6 +690,7 @@
     renderFaqPage();
     renderCartCount();
     renderIcons();
+    renderProductRefreshNotice();
   };
 
   const hydrateProductsFromSafeFallback = () => {
@@ -662,6 +711,7 @@
 
   const fetchProducts = async () => {
     const hasSafeHydration = hydrateProductsFromSafeFallback();
+    state.productRefreshNotice = "";
 
     try {
       const products = await loadProductsFromApi(API_BASE);
@@ -685,6 +735,7 @@
 
     const managedProducts = loadManagedProducts();
     if (managedProducts.length) {
+      state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
       setProducts(managedProducts);
       return;
     }
@@ -692,6 +743,7 @@
     try {
       const products = await loadProductsFromJson();
       persistProductsCache(products);
+      state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
       setProducts(products);
       return;
     } catch (error) {
@@ -702,6 +754,7 @@
       try {
         const products = await loadProductsFromLocalFile();
         persistProductsCache(products);
+        state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
         setProducts(products);
         return;
       } catch (error) {
@@ -711,11 +764,14 @@
 
     const cachedProducts = loadCachedProducts();
     if (cachedProducts.length) {
+      state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
       setProducts(cachedProducts);
       return;
     }
 
     if (hasSafeHydration && state.products.length) {
+      state.productRefreshNotice = "Some products may be outdated. Failed to refresh.";
+      renderProductRefreshNotice();
       console.warn("[storefront] Keeping previously hydrated products after all live product sources failed.");
       return;
     }
