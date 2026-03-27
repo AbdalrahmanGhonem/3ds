@@ -135,6 +135,10 @@
     return products;
   };
 
+  const logProductLoadError = (source, error) => {
+    console.error(`[storefront] Product load failed from ${source}`, error);
+  };
+
   const loadProductsFromApi = async (base) => {
     const response = await fetch(`${base}/api/products`, { cache: "no-store" });
     if (!response.ok) throw new Error(`Failed to load products API: HTTP ${response.status}`);
@@ -640,14 +644,32 @@
     renderIcons();
   };
 
+  const hydrateProductsFromSafeFallback = () => {
+    const cachedProducts = loadCachedProducts();
+    if (cachedProducts.length) {
+      setProducts(cachedProducts);
+      return true;
+    }
+
+    const managedProducts = loadManagedProducts();
+    if (managedProducts.length) {
+      setProducts(managedProducts);
+      return true;
+    }
+
+    return false;
+  };
+
   const fetchProducts = async () => {
+    const hasSafeHydration = hydrateProductsFromSafeFallback();
+
     try {
       const products = await loadProductsFromApi(API_BASE);
       persistProductsCache(products);
       setProducts(products);
       return;
     } catch (error) {
-      console.warn("Primary products API load failed", error);
+      logProductLoadError(`primary API (${API_BASE})`, error);
     }
 
     if (API_BASE !== FALLBACK_API_BASE) {
@@ -657,7 +679,7 @@
         setProducts(products);
         return;
       } catch (error) {
-        console.warn("Fallback products API load failed", error);
+        logProductLoadError(`fallback API (${FALLBACK_API_BASE})`, error);
       }
     }
 
@@ -673,7 +695,7 @@
       setProducts(products);
       return;
     } catch (error) {
-      console.warn("JSON product load failed", error);
+      logProductLoadError("JSON fallback", error);
     }
 
     if (window.location.protocol === "file:") {
@@ -683,13 +705,18 @@
         setProducts(products);
         return;
       } catch (error) {
-        console.warn("Local file product load failed", error);
+        logProductLoadError("local file fallback", error);
       }
     }
 
     const cachedProducts = loadCachedProducts();
     if (cachedProducts.length) {
       setProducts(cachedProducts);
+      return;
+    }
+
+    if (hasSafeHydration && state.products.length) {
+      console.warn("[storefront] Keeping previously hydrated products after all live product sources failed.");
       return;
     }
 
