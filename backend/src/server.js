@@ -22,6 +22,14 @@ const PASSWORD_RESET_MINUTES = Number(process.env.PASSWORD_RESET_MINUTES || 15);
 const EMAIL_USER = String(process.env.EMAIL_USER || "").trim();
 const EMAIL_PASS = String(process.env.EMAIL_PASS || "").replace(/\s+/g, "");
 fs.mkdirSync(uploadsDir, { recursive: true });
+const SEEDED_DEMO_PRODUCT_SLUGS = [
+  "neon-cube-keychain",
+  "orbit-ring",
+  "monogram-block",
+  "retro-badge",
+  "metallic-edge",
+  "glyph-tag"
+];
 const BOOTSTRAP_ADMIN = {
   id: "bootstrap-admin",
   name: "3DS Admin",
@@ -96,6 +104,146 @@ const normalizeAccountUser = (user) => ({
   email: String(user.email || ""),
   is_admin: user.is_admin === 1 || user.is_admin === true
 });
+const quoteIdentifier = (value) => `\`${String(value || "").replace(/`/g, "``")}\``;
+
+let usersTableSchemaPromise = null;
+
+const createUsersTableSchemaError = (message) => {
+  const error = new Error(message);
+  error.code = "USERS_SCHEMA_INVALID";
+  return error;
+};
+
+const isRequiredColumnWithoutDefault = (column) =>
+  Boolean(
+    column &&
+      String(column.Null).toUpperCase() === "NO" &&
+      column.Default === null &&
+      !String(column.Extra || "").toLowerCase().includes("auto_increment")
+  );
+
+const loadUsersTableSchema = async () => {
+  if (!usersTableSchemaPromise) {
+    usersTableSchemaPromise = (async () => {
+      const [columns] = await pool.query("SHOW COLUMNS FROM users");
+      const byName = new Map(columns.map((column) => [String(column.Field || "").trim(), column]));
+      const schema = {
+        id: byName.has("id") ? "id" : "",
+        email: byName.has("email") ? "email" : "",
+        fullName: byName.has("full_name") ? "full_name" : byName.has("name") ? "name" : "",
+        passwordHash: byName.has("password_hash") ? "password_hash" : byName.has("password") ? "password" : "",
+        isAdmin: byName.has("is_admin") ? "is_admin" : "",
+        createdAt: byName.has("created_at") ? "created_at" : "",
+        updatedAt: byName.has("updated_at") ? "updated_at" : "",
+        phone: byName.has("phone") ? "phone" : "",
+        locale: byName.has("locale") ? "locale" : "",
+        byName
+      };
+
+      if (!schema.id || !schema.email || !schema.fullName || !schema.passwordHash) {
+        throw createUsersTableSchemaError(
+          "Users table must include id, email, and name/password columns for authentication."
+        );
+      }
+
+      return schema;
+    })().catch((error) => {
+      usersTableSchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return usersTableSchemaPromise;
+};
+
+const getUserIdentitySelect = (schema) =>
+  [
+    `${quoteIdentifier(schema.id)} AS id`,
+    `${quoteIdentifier(schema.fullName)} AS full_name`,
+    `${quoteIdentifier(schema.email)} AS email`,
+    schema.isAdmin ? `${quoteIdentifier(schema.isAdmin)} AS is_admin` : "0 AS is_admin"
+  ].join(", ");
+
+const getUserAuthSelect = (schema) =>
+  [
+    `${quoteIdentifier(schema.id)} AS id`,
+    `${quoteIdentifier(schema.fullName)} AS full_name`,
+    `${quoteIdentifier(schema.passwordHash)} AS password_hash`,
+    schema.isAdmin ? `${quoteIdentifier(schema.isAdmin)} AS is_admin` : "0 AS is_admin"
+  ].join(", ");
+
+const buildUserInsert = ({ schema, fullName, email, passwordHash }) => {
+  const columns = [schema.fullName, schema.email, schema.passwordHash];
+  const values = [fullName, email, passwordHash];
+  const placeholders = ["?", "?", "?"];
+
+  if (schema.isAdmin) {
+    columns.push(schema.isAdmin);
+    placeholders.push("0");
+  }
+
+  if (schema.locale && isRequiredColumnWithoutDefault(schema.byName.get(schema.locale))) {
+    columns.push(schema.locale);
+    values.push("en");
+    placeholders.push("?");
+  }
+
+  if (schema.phone && isRequiredColumnWithoutDefault(schema.byName.get(schema.phone))) {
+    columns.push(schema.phone);
+    values.push("");
+    placeholders.push("?");
+  }
+
+  if (schema.createdAt && isRequiredColumnWithoutDefault(schema.byName.get(schema.createdAt))) {
+    columns.push(schema.createdAt);
+    placeholders.push("NOW()");
+  }
+
+  if (schema.updatedAt && isRequiredColumnWithoutDefault(schema.byName.get(schema.updatedAt))) {
+    columns.push(schema.updatedAt);
+    placeholders.push("NOW()");
+  }
+
+  return {
+    sql: `INSERT INTO users (${columns.map(quoteIdentifier).join(", ")}) VALUES (${placeholders.join(", ")})`,
+    values
+  };
+};
+
+const buildPasswordUpdate = (schema) => {
+  const assignments = [`${quoteIdentifier(schema.passwordHash)} = ?`];
+  if (schema.updatedAt) {
+    assignments.push(`${quoteIdentifier(schema.updatedAt)} = NOW()`);
+  }
+  return `UPDATE users SET ${assignments.join(", ")} WHERE ${quoteIdentifier(schema.id)} = ?`;
+};
+
+const logDatabaseError = (context, err, extra = {}) => {
+  console.error(`[auth] ${context}`, {
+    message: err?.message,
+    code: err?.code,
+    errno: err?.errno,
+    sqlState: err?.sqlState,
+    sqlMessage: err?.sqlMessage,
+    ...extra
+  });
+};
+
+const errorResponseForAuth = (err, fallbackMessage) => {
+  if (err?.code === "ER_DUP_ENTRY") {
+    return { status: 409, error: "Email already registered" };
+  }
+  if (err?.code === "ER_NO_SUCH_TABLE") {
+    return { status: 500, error: "Users table does not exist in the database" };
+  }
+  if (err?.code === "ER_BAD_FIELD_ERROR" || err?.code === "USERS_SCHEMA_INVALID") {
+    return { status: 500, error: "Users table schema is missing required signup columns" };
+  }
+  if (err?.code === "ER_NO_DEFAULT_FOR_FIELD") {
+    return { status: 500, error: "Users table requires additional fields before signup can save new accounts" };
+  }
+  return { status: 500, error: fallbackMessage };
+};
 
 const loadAuthenticatedUser = async (userId, isAdmin) => {
   if (String(userId) === BOOTSTRAP_ADMIN.id && isAdmin) {
@@ -112,8 +260,9 @@ const loadAuthenticatedUser = async (userId, isAdmin) => {
     return null;
   }
 
+  const userSchema = await loadUsersTableSchema();
   const [rows] = await pool.query(
-    "SELECT id, full_name, email, is_admin FROM users WHERE id = ? LIMIT 1",
+    `SELECT ${getUserIdentitySelect(userSchema)} FROM users WHERE ${quoteIdentifier(userSchema.id)} = ? LIMIT 1`,
     [numericUserId]
   );
 
@@ -205,21 +354,22 @@ app.post("/api/signup", async (req, res) => {
     return res.status(400).json({ error: "Password must be at least 6 characters" });
   }
   try {
-    const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [email]);
+    const userSchema = await loadUsersTableSchema();
+    const [existing] = await pool.query(
+      `SELECT ${quoteIdentifier(userSchema.id)} AS id FROM users WHERE ${quoteIdentifier(userSchema.email)} = ? LIMIT 1`,
+      [email]
+    );
     if (existing.length) {
       return res.status(409).json({ error: "Email already registered" });
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    const [result] = await pool.query(
-      "INSERT INTO users (full_name, email, password_hash, is_admin, created_at, updated_at) VALUES (?, ?, ?, 0, NOW(), NOW())",
-      [rawName, email, passwordHash]
-    );
+    const insert = buildUserInsert({ schema: userSchema, fullName: rawName, email, passwordHash });
+    const [result] = await pool.query(insert.sql, insert.values);
     res.status(201).json({ id: result.insertId, email, name: rawName, is_admin: 0 });
   } catch (err) {
-    if (err?.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ error: "Email already registered" });
-    }
-    res.status(500).json({ error: err.message });
+    logDatabaseError("signup failed", err, { email });
+    const response = errorResponseForAuth(err, "Could not create account right now");
+    res.status(response.status).json({ error: response.error });
   }
 });
 
@@ -238,8 +388,9 @@ app.post("/api/login", async (req, res) => {
     });
   }
   try {
+    const userSchema = await loadUsersTableSchema();
     const [rows] = await pool.query(
-      "SELECT id, full_name, password_hash, is_admin FROM users WHERE email = ? LIMIT 1",
+      `SELECT ${getUserAuthSelect(userSchema)} FROM users WHERE ${quoteIdentifier(userSchema.email)} = ? LIMIT 1`,
       [email]
     );
     if (!rows.length) {
@@ -252,7 +403,9 @@ app.post("/api/login", async (req, res) => {
     }
     res.json({ id: user.id, name: user.full_name, email, is_admin: user.is_admin === 1 || user.is_admin === true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logDatabaseError("login failed", err, { email });
+    const response = errorResponseForAuth(err, "Could not log in right now");
+    res.status(response.status).json({ error: response.error });
   }
 });
 
@@ -266,8 +419,9 @@ app.post("/api/forgot-password", async (req, res) => {
   }
 
   try {
+    const userSchema = await loadUsersTableSchema();
     const [rows] = await pool.query(
-      "SELECT id, full_name, email FROM users WHERE email = ? LIMIT 1",
+      `SELECT ${getUserIdentitySelect(userSchema)} FROM users WHERE ${quoteIdentifier(userSchema.email)} = ? LIMIT 1`,
       [email]
     );
     if (!rows.length) {
@@ -292,7 +446,9 @@ app.post("/api/forgot-password", async (req, res) => {
 
     res.json({ ok: true, message: "Check your email" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logDatabaseError("forgot-password failed", err, { email });
+    const response = errorResponseForAuth(err, "Could not start password reset right now");
+    res.status(response.status).json({ error: response.error });
   }
 });
 
@@ -307,6 +463,7 @@ app.post("/api/reset-password", async (req, res) => {
   }
 
   try {
+    const userSchema = await loadUsersTableSchema();
     const tokenHash = hashPasswordResetToken(token);
     const [rows] = await pool.query(
       `SELECT pr.id, pr.user_id, pr.expires_at
@@ -323,14 +480,16 @@ app.post("/api/reset-password", async (req, res) => {
     const resetRecord = rows[0];
     const passwordHash = await bcrypt.hash(password, 10);
     await pool.query(
-      "UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?",
+      buildPasswordUpdate(userSchema),
       [passwordHash, resetRecord.user_id]
     );
     await pool.query("DELETE FROM password_resets WHERE user_id = ?", [resetRecord.user_id]);
 
     res.json({ ok: true, message: "Password reset successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logDatabaseError("reset-password failed", err);
+    const response = errorResponseForAuth(err, "Could not reset password right now");
+    res.status(response.status).json({ error: response.error });
   }
 });
 
@@ -413,8 +572,17 @@ app.post("/api/upload", requireAdmin, (req, res) => {
 // Products
 app.get("/api/products", async (_req, res) => {
   try {
+    const demoSlugPlaceholders = SEEDED_DEMO_PRODUCT_SLUGS.map(() => "?").join(", ");
+    const sql = `
+      SELECT id, slug, name, description, price_egp, material, color, is_active, image_url, featured
+      FROM products
+      WHERE is_active = 1
+      ${demoSlugPlaceholders ? `AND slug NOT IN (${demoSlugPlaceholders})` : ""}
+      ORDER BY id ASC
+    `;
     const [rows] = await pool.query(
-      "SELECT id, slug, name, description, price_egp, material, color, is_active, image_url, featured FROM products WHERE is_active = 1"
+      sql,
+      SEEDED_DEMO_PRODUCT_SLUGS
     );
     res.json(rows);
   } catch (err) {
