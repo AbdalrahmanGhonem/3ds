@@ -5,7 +5,7 @@
     "name": "Gray Shark Keychain",
     "price": 300,
     "color": "Gray",
-    "image": "assets/products/gray-shark-keychain.jpg",
+    "image": "/assets/products/gray-shark-keychain.jpg",
     "description": "High-quality flexible 3D printed shark keychain, perfect for everyday use.",
     "featured": true
   },
@@ -15,7 +15,7 @@
     "name": "Cute Dog Keychain",
     "price": 300,
     "color": "White",
-    "image": "assets/products/cute-dog-keychain.jpg",
+    "image": "/assets/products/cute-dog-keychain.jpg",
     "description": "Adorable articulated dog keychain with smooth flexible joints.",
     "featured": true
   },
@@ -25,7 +25,7 @@
     "name": "Articulated Raccoon Keychain",
     "price": 300,
     "color": "Gray",
-    "image": "assets/products/articulated-raccoon-keychain.jpg",
+    "image": "/assets/products/articulated-raccoon-keychain.jpg",
     "description": "Flexible raccoon keychain with detailed 3D printed design.",
     "featured": true
   },
@@ -35,7 +35,7 @@
     "name": "Flexible Chameleon Keychain",
     "price": 300,
     "color": "Teal",
-    "image": "assets/products/flexible-chameleon-keychain.jpg",
+    "image": "/assets/products/flexible-chameleon-keychain.jpg",
     "description": "Colorful articulated chameleon keychain with a fun flexible body.",
     "featured": true
   }
