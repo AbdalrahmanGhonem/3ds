@@ -670,27 +670,50 @@ const cartIdentifier = (req) => {
   return { type: "none", value: null };
 };
 
-const getOrCreateCartId = async (identifier) => {
+const findExistingCartId = async (identifier) => {
   if (identifier.type === "user") {
     const [rows] = await pool.query("SELECT id FROM carts WHERE user_id = ? LIMIT 1", [identifier.value]);
-    if (rows.length) return rows[0].id;
+    return rows[0]?.id || null;
+  }
+  if (identifier.type === "guest") {
+    const [rows] = await pool.query("SELECT id FROM carts WHERE guest_token = ? LIMIT 1", [identifier.value]);
+    return rows[0]?.id || null;
+  }
+  return null;
+};
+
+const getOrCreateCartId = async (identifier) => {
+  if (identifier.type === "user") {
+    const existingId = await findExistingCartId(identifier);
+    if (existingId) return existingId;
     const [result] = await pool.query("INSERT INTO carts (user_id) VALUES (?)", [identifier.value]);
     return result.insertId;
   }
   if (identifier.type === "guest") {
-    const [rows] = await pool.query("SELECT id FROM carts WHERE guest_token = ? LIMIT 1", [identifier.value]);
-    if (rows.length) return rows[0].id;
+    const existingId = await findExistingCartId(identifier);
+    if (existingId) return existingId;
     const [result] = await pool.query("INSERT INTO carts (guest_token) VALUES (?)", [identifier.value]);
     return result.insertId;
   }
   return null;
 };
 
+const logCartError = (context, err, extra = {}) => {
+  console.error(`[cart] ${context}`, {
+    message: err?.message,
+    code: err?.code,
+    errno: err?.errno,
+    sqlState: err?.sqlState,
+    sqlMessage: err?.sqlMessage,
+    ...extra
+  });
+};
+
 app.get("/api/cart", async (req, res) => {
   try {
     const identifier = cartIdentifier(req);
     if (identifier.type === "none") return res.json({ items: [] });
-    const cartId = await getOrCreateCartId(identifier);
+    const cartId = await findExistingCartId(identifier);
     if (!cartId) return res.json({ items: [] });
     const [rows] = await pool.query(
       "SELECT product_id, quantity FROM cart_items WHERE cart_id = ?",
@@ -703,7 +726,8 @@ app.get("/api/cart", async (req, res) => {
       }))
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logCartError("get cart failed", err, { identifier: cartIdentifier(req) });
+    res.json({ items: [] });
   }
 });
 
