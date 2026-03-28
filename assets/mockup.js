@@ -890,12 +890,12 @@
         city: String(form.elements.city?.value || "").trim(),
         district: String(form.elements.district?.value || "").trim(),
         address: String(form.elements.address?.value || "").trim(),
-        payment_method: "cash_on_delivery",
-        items: state.cart.map((line) => ({
+        payment_method: "cash_on_delivery"
+      };
+      const checkoutItems = state.cart.map((line) => ({
           product_id: Number(line.id),
           quantity: Number(line.qty)
-        }))
-      };
+        }));
 
       button.disabled = true;
       button.textContent = "Submitting...";
@@ -904,17 +904,62 @@
       delete status.dataset.tone;
 
       try {
+        console.info("[checkout] syncing cart before order", checkoutItems);
+        const cartSyncResponse = await fetch(`${API_BASE}/api/cart`, {
+          method: "POST",
+          headers: cartHeaders(),
+          body: JSON.stringify({ items: checkoutItems })
+        });
+        const cartSyncText = await cartSyncResponse.text();
+        let cartSyncData = {};
+        try {
+          cartSyncData = JSON.parse(cartSyncText);
+        } catch {
+          cartSyncData = {};
+        }
+        if (!cartSyncResponse.ok) {
+          console.error("[checkout] cart sync failed", {
+            status: cartSyncResponse.status,
+            body: cartSyncText
+          });
+          throw new Error(cartSyncData?.error || cartSyncText || "Could not sync your cart before checkout.");
+        }
+
+        const cartVerifyResponse = await fetch(`${API_BASE}/api/cart`, { headers: cartHeaders() });
+        const cartVerifyText = await cartVerifyResponse.text();
+        let cartVerifyData = {};
+        try {
+          cartVerifyData = JSON.parse(cartVerifyText);
+        } catch {
+          cartVerifyData = {};
+        }
+        console.info("[checkout] backend cart after sync", cartVerifyData?.items || []);
+        if (!cartVerifyResponse.ok) {
+          throw new Error(cartVerifyData?.error || cartVerifyText || "Could not verify your cart before checkout.");
+        }
+
+        console.info("[checkout] creating order", payload);
         const response = await fetch(`${API_BASE}/api/orders`, {
           method: "POST",
           headers: cartHeaders(),
           body: JSON.stringify(payload)
         });
-
-        const data = await response.json().catch(() => ({}));
+        const responseText = await response.text();
+        let data = {};
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          data = {};
+        }
         if (!response.ok) {
-          throw new Error(data?.error || "Could not submit your order right now.");
+          console.error("[checkout] order create failed", {
+            status: response.status,
+            body: responseText
+          });
+          throw new Error(data?.error || responseText || "Could not submit your order right now.");
         }
 
+        console.info("[checkout] order created", data?.order || null);
         status.hidden = false;
         status.dataset.tone = "success";
         status.textContent = data?.order?.order_number

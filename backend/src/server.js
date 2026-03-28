@@ -1152,13 +1152,33 @@ app.post("/api/orders", async (req, res) => {
   try {
     await ensureOrderSchemaReady();
 
-    const orderPayload = validateOrderPayload(req.body);
     const identifier = cartIdentifier(req);
+    const requestedItems = sanitizeCartItems(req.body?.items);
+    console.info("[orders] incoming payload", {
+      identifier,
+      body: {
+        full_name: String(req.body?.full_name || req.body?.customer_name || "").trim(),
+        phone: String(req.body?.phone || "").trim(),
+        city: String(req.body?.city || req.body?.governorate || "").trim(),
+        district: String(req.body?.district || "").trim(),
+        address: String(req.body?.address || "").trim(),
+        payment_method: String(req.body?.payment_method || "").trim(),
+        items: requestedItems
+      }
+    });
+
+    const orderPayload = validateOrderPayload(req.body);
     if (identifier.type === "none") {
       return res.status(400).json({ error: "Missing cart identity." });
     }
-    const requestedItems = sanitizeCartItems(req.body?.items);
-    const cartItems = requestedItems.length ? requestedItems : await loadCartItemsByIdentifier(identifier);
+    const backendCartItems = await loadCartItemsByIdentifier(identifier);
+    const cartItems = backendCartItems.length ? backendCartItems : requestedItems;
+    console.info("[orders] cart items used", {
+      identifier,
+      backend_cart_items: backendCartItems,
+      requested_items: requestedItems,
+      final_items: cartItems
+    });
 
     if (!cartItems.length) {
       return res.status(400).json({ error: "Your cart is empty." });
@@ -1224,6 +1244,11 @@ app.post("/api/orders", async (req, res) => {
           ]
         );
         orderId = Number(orderResult.insertId);
+        console.info("[orders] order insert result", {
+          order_id: orderId,
+          order_number: orderNumber,
+          inserted_rows: orderResult?.affectedRows || 1
+        });
         break;
       } catch (error) {
         if (error?.code === "ER_DUP_ENTRY" && attempt < 4) continue;
@@ -1248,7 +1273,7 @@ app.post("/api/orders", async (req, res) => {
       line.line_total_egp
     ]);
 
-    await connection.query(
+    const [orderItemsResult] = await connection.query(
       `INSERT INTO order_items (
         order_id,
         product_id,
@@ -1263,12 +1288,25 @@ app.post("/api/orders", async (req, res) => {
       ) VALUES ?`,
       [values]
     );
+    console.info("[orders] order items insert result", {
+      order_id: orderId,
+      inserted_rows: orderItemsResult?.affectedRows || values.length,
+      items: values.length
+    });
 
     if (cartId) {
       await connection.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
     }
 
     await connection.commit();
+    console.info("[orders] order committed", {
+      order_id: orderId,
+      order_number: orderNumber,
+      cart_id: cartId,
+      subtotal,
+      shipping,
+      total
+    });
     res.status(201).json({
       ok: true,
       order: {
@@ -1294,7 +1332,9 @@ app.post("/api/orders", async (req, res) => {
       } catch {}
     }
     logOrderError("create order failed", err, { identifier: cartIdentifier(req) });
-    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not create order right now." });
+    res.status(err.status || 500).json({
+      error: err.status ? err.message : err?.sqlMessage || err?.message || "Could not create order right now."
+    });
   } finally {
     connection?.release();
   }
