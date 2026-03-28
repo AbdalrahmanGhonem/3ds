@@ -1,0 +1,42 @@
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_number VARCHAR(64) DEFAULT NULL,
+  customer_name VARCHAR(190) NOT NULL,
+  phone VARCHAR(32) NOT NULL,
+  governorate VARCHAR(120) NOT NULL,
+  district VARCHAR(120) NOT NULL,
+  address TEXT NOT NULL,
+  payment_method VARCHAR(64) NOT NULL DEFAULT 'cash_on_delivery',
+  subtotal_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  shipping_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  user_id BIGINT UNSIGNED NULL,
+  guest_token VARCHAR(190) DEFAULT NULL,
+  shipping_name VARCHAR(190) DEFAULT NULL,
+  shipping_phone VARCHAR(32) DEFAULT NULL,
+  shipping_addr TEXT DEFAULT NULL,
+  created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_orders_order_number (order_number),
+  KEY idx_orders_user_id (user_id),
+  KEY idx_orders_guest_token (guest_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  product_name VARCHAR(190) NOT NULL,
+  product_slug VARCHAR(190) NOT NULL,
+  product_image_url TEXT DEFAULT NULL,
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  unit_price_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  quantity INT UNSIGNED NOT NULL,
+  line_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  line_total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (id),
+  KEY idx_order_items_order_id (order_id),
+  KEY idx_order_items_product_id (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

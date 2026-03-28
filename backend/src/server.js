@@ -73,6 +73,8 @@ const pageRoutes = new Map([
   ["/manage.html", "manage.html"],
   ["/admin-products", "admin-products.html"],
   ["/admin-products.html", "admin-products.html"],
+  ["/admin-orders", "admin-orders.html"],
+  ["/admin-orders.html", "admin-orders.html"],
   ["/checkout", "checkout.html"],
   ["/checkout.html", "checkout.html"]
 ]);
@@ -280,6 +282,344 @@ const loadAuthenticatedUser = async (userId, isAdmin) => {
   );
 
   return rows.length ? rows[0] : null;
+};
+
+const ORDER_STATUS_VALUES = new Set(["pending", "confirmed", "shipped", "delivered", "cancelled"]);
+const ORDER_PAYMENT_METHOD = "cash_on_delivery";
+const ORDER_SHIPPING_THRESHOLD_EGP = 500;
+const ORDER_SHIPPING_FEE_EGP = 60;
+
+let orderSchemaPromise = null;
+
+const createHttpError = (status, message) => {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+};
+
+const normalizeMoney = (value) => Number(Number(value || 0).toFixed(2));
+const normalizePhone = (value) => String(value || "").trim().replace(/\s+/g, " ");
+const calculateShippingEgp = (subtotal) =>
+  subtotal >= ORDER_SHIPPING_THRESHOLD_EGP || subtotal === 0 ? 0 : ORDER_SHIPPING_FEE_EGP;
+const createOrderNumber = () =>
+  `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+
+const logOrderError = (context, err, extra = {}) => {
+  console.error(`[orders] ${context}`, {
+    message: err?.message,
+    code: err?.code,
+    errno: err?.errno,
+    sqlState: err?.sqlState,
+    sqlMessage: err?.sqlMessage,
+    ...extra
+  });
+};
+
+const tableExists = async (tableName) => {
+  const [rows] = await pool.query(
+    "SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+    [tableName]
+  );
+  return Number(rows[0]?.count) > 0;
+};
+
+const indexExists = async (tableName, indexName) => {
+  const [rows] = await pool.query(
+    "SELECT COUNT(*) AS count FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?",
+    [tableName, indexName]
+  );
+  return Number(rows[0]?.count) > 0;
+};
+
+const loadTableColumns = async (tableName) => {
+  if (!(await tableExists(tableName))) return new Map();
+  const [rows] = await pool.query(`SHOW COLUMNS FROM ${quoteIdentifier(tableName)}`);
+  return new Map(rows.map((row) => [String(row.Field), row]));
+};
+
+const addColumnIfMissing = async (tableName, columns, columnName, definitionSql) => {
+  if (columns.has(columnName)) return;
+  await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} ADD COLUMN ${definitionSql}`);
+  columns.set(columnName, { Field: columnName });
+};
+
+const ensureIndex = async (tableName, indexName, definitionSql) => {
+  if (await indexExists(tableName, indexName)) return;
+  await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} ADD ${definitionSql}`);
+};
+
+const ensureOrderSchema = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      order_number VARCHAR(64) DEFAULT NULL,
+      customer_name VARCHAR(190) NOT NULL,
+      phone VARCHAR(32) NOT NULL,
+      governorate VARCHAR(120) NOT NULL,
+      district VARCHAR(120) NOT NULL,
+      address TEXT NOT NULL,
+      payment_method VARCHAR(64) NOT NULL DEFAULT 'cash_on_delivery',
+      subtotal_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      shipping_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      user_id BIGINT UNSIGNED NULL,
+      guest_token VARCHAR(190) DEFAULT NULL,
+      shipping_name VARCHAR(190) DEFAULT NULL,
+      shipping_phone VARCHAR(32) DEFAULT NULL,
+      shipping_addr TEXT DEFAULT NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uniq_orders_order_number (order_number),
+      KEY idx_orders_user_id (user_id),
+      KEY idx_orders_guest_token (guest_token)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  const orderColumns = await loadTableColumns("orders");
+  await addColumnIfMissing("orders", orderColumns, "order_number", "order_number VARCHAR(64) NULL AFTER id");
+  await addColumnIfMissing("orders", orderColumns, "customer_name", "customer_name VARCHAR(190) NULL AFTER order_number");
+  await addColumnIfMissing("orders", orderColumns, "phone", "phone VARCHAR(32) NULL AFTER customer_name");
+  await addColumnIfMissing("orders", orderColumns, "governorate", "governorate VARCHAR(120) NULL AFTER phone");
+  await addColumnIfMissing("orders", orderColumns, "district", "district VARCHAR(120) NULL AFTER governorate");
+  await addColumnIfMissing("orders", orderColumns, "address", "address TEXT NULL AFTER district");
+  await addColumnIfMissing("orders", orderColumns, "subtotal_egp", "subtotal_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER payment_method");
+  await addColumnIfMissing("orders", orderColumns, "shipping_egp", "shipping_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER subtotal_egp");
+  await addColumnIfMissing("orders", orderColumns, "guest_token", "guest_token VARCHAR(190) NULL AFTER user_id");
+  await addColumnIfMissing("orders", orderColumns, "shipping_name", "shipping_name VARCHAR(190) NULL AFTER guest_token");
+  await addColumnIfMissing("orders", orderColumns, "shipping_phone", "shipping_phone VARCHAR(32) NULL AFTER shipping_name");
+  await addColumnIfMissing("orders", orderColumns, "shipping_addr", "shipping_addr TEXT NULL AFTER shipping_phone");
+
+  await pool.query("ALTER TABLE orders MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
+  await pool.query("ALTER TABLE orders MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'pending'");
+  await pool.query("ALTER TABLE orders MODIFY COLUMN payment_method VARCHAR(64) NOT NULL DEFAULT 'cash_on_delivery'");
+
+  await ensureIndex("orders", "uniq_orders_order_number", "UNIQUE INDEX uniq_orders_order_number (order_number)");
+  await ensureIndex("orders", "idx_orders_user_id", "INDEX idx_orders_user_id (user_id)");
+  await ensureIndex("orders", "idx_orders_guest_token", "INDEX idx_orders_guest_token (guest_token)");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      order_id BIGINT UNSIGNED NOT NULL,
+      product_id BIGINT UNSIGNED NOT NULL,
+      product_name VARCHAR(190) NOT NULL,
+      product_slug VARCHAR(190) NOT NULL,
+      product_image_url TEXT DEFAULT NULL,
+      unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      unit_price_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      quantity INT UNSIGNED NOT NULL,
+      line_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      line_total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      PRIMARY KEY (id),
+      KEY idx_order_items_order_id (order_id),
+      KEY idx_order_items_product_id (product_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  const itemColumns = await loadTableColumns("order_items");
+  await addColumnIfMissing("order_items", itemColumns, "product_name", "product_name VARCHAR(190) NULL AFTER product_id");
+  await addColumnIfMissing("order_items", itemColumns, "product_slug", "product_slug VARCHAR(190) NULL AFTER product_name");
+  await addColumnIfMissing("order_items", itemColumns, "product_image_url", "product_image_url TEXT NULL AFTER product_slug");
+  await addColumnIfMissing("order_items", itemColumns, "unit_price_egp", "unit_price_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER unit_price");
+  await addColumnIfMissing("order_items", itemColumns, "line_total_egp", "line_total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER line_total");
+
+  await ensureIndex("order_items", "idx_order_items_order_id", "INDEX idx_order_items_order_id (order_id)");
+  await ensureIndex("order_items", "idx_order_items_product_id", "INDEX idx_order_items_product_id (product_id)");
+};
+
+const ensureOrderSchemaReady = async () => {
+  if (!orderSchemaPromise) {
+    orderSchemaPromise = ensureOrderSchema().catch((error) => {
+      orderSchemaPromise = null;
+      throw error;
+    });
+  }
+  return orderSchemaPromise;
+};
+
+const validateOrderPayload = (body = {}) => {
+  const customerName = String(body.customer_name || body.full_name || "").trim();
+  const phone = normalizePhone(body.phone);
+  const governorate = String(body.governorate || body.city || "").trim();
+  const district = String(body.district || "").trim();
+  const address = String(body.address || "").trim();
+  const paymentMethod = String(body.payment_method || ORDER_PAYMENT_METHOD).trim().toLowerCase();
+  const phoneDigits = phone.replace(/\D/g, "");
+
+  if (customerName.length < 2) throw createHttpError(400, "Customer name is required.");
+  if (phoneDigits.length < 8) throw createHttpError(400, "A valid phone number is required.");
+  if (governorate.length < 2) throw createHttpError(400, "Governorate is required.");
+  if (district.length < 2) throw createHttpError(400, "District is required.");
+  if (address.length < 5) throw createHttpError(400, "Address is required.");
+  if (paymentMethod !== ORDER_PAYMENT_METHOD) {
+    throw createHttpError(400, "Only Cash on Delivery is supported right now.");
+  }
+
+  return {
+    customerName,
+    phone,
+    governorate,
+    district,
+    address,
+    paymentMethod: ORDER_PAYMENT_METHOD
+  };
+};
+
+const sanitizeCartItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      product_id: Number(item?.product_id),
+      quantity: Number(item?.quantity)
+    }))
+    .filter(
+      (item) =>
+        Number.isInteger(item.product_id) &&
+        item.product_id > 0 &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0
+    );
+
+const mapOrderRecord = (row) => ({
+  id: Number(row.id),
+  order_number: String(row.order_number || ""),
+  customer_name: String(row.customer_name || row.shipping_name || ""),
+  phone: String(row.phone || row.shipping_phone || ""),
+  governorate: String(row.governorate || ""),
+  district: String(row.district || ""),
+  address: String(row.address || row.shipping_addr || ""),
+  payment_method: String(row.payment_method || ORDER_PAYMENT_METHOD),
+  subtotal_egp: normalizeMoney(row.subtotal_egp),
+  shipping_egp: normalizeMoney(row.shipping_egp),
+  total_egp: normalizeMoney(row.total_egp),
+  status: String(row.status || "pending"),
+  user_id: row.user_id == null ? null : Number(row.user_id),
+  guest_token: String(row.guest_token || ""),
+  created_at: row.created_at,
+  updated_at: row.updated_at
+});
+
+const fetchOrderItemRows = async (orderIds) => {
+  if (!orderIds.length) return [];
+  const placeholders = orderIds.map(() => "?").join(", ");
+  const [rows] = await pool.query(
+    `SELECT
+        order_id,
+        product_id,
+        product_name,
+        product_slug,
+        product_image_url,
+        quantity,
+        COALESCE(unit_price_egp, unit_price, 0) AS unit_price_egp,
+        COALESCE(line_total_egp, line_total, 0) AS line_total_egp
+      FROM order_items
+      WHERE order_id IN (${placeholders})
+      ORDER BY id ASC`,
+    orderIds
+  );
+  return rows;
+};
+
+const groupOrderItems = (rows = []) => {
+  const itemsByOrder = new Map();
+  rows.forEach((row) => {
+    const items = itemsByOrder.get(row.order_id) || [];
+    items.push({
+      product_id: Number(row.product_id),
+      product_name: String(row.product_name || ""),
+      product_slug: String(row.product_slug || ""),
+      product_image_url: String(row.product_image_url || ""),
+      quantity: Number(row.quantity) || 0,
+      unit_price_egp: normalizeMoney(row.unit_price_egp),
+      line_total_egp: normalizeMoney(row.line_total_egp)
+    });
+    itemsByOrder.set(row.order_id, items);
+  });
+  return itemsByOrder;
+};
+
+const loadOrderDetail = async (whereClause, params = []) => {
+  await ensureOrderSchemaReady();
+  const [rows] = await pool.query(
+    `SELECT
+        id,
+        order_number,
+        customer_name,
+        phone,
+        governorate,
+        district,
+        address,
+        payment_method,
+        subtotal_egp,
+        shipping_egp,
+        total_egp,
+        status,
+        user_id,
+        guest_token,
+        created_at,
+        updated_at
+      FROM orders
+      ${whereClause}
+      LIMIT 1`,
+    params
+  );
+
+  if (!rows.length) return null;
+  const order = mapOrderRecord(rows[0]);
+  const itemRows = await fetchOrderItemRows([order.id]);
+  const itemsByOrder = groupOrderItems(itemRows);
+  return { ...order, items: itemsByOrder.get(order.id) || [] };
+};
+
+const loadCheckoutProducts = async (productIds, executor = pool) => {
+  if (!productIds.length) return new Map();
+  const placeholders = productIds.map(() => "?").join(", ");
+  const [rows] = await executor.query(
+    `SELECT id, slug, name, image_url, price_egp, is_active
+     FROM products
+     WHERE id IN (${placeholders})`,
+    productIds
+  );
+  return new Map(rows.map((row) => [Number(row.id), row]));
+};
+
+const buildOrderItemsFromCart = (cartItems, productMap) => {
+  const lines = [];
+  let subtotal = 0;
+
+  for (const item of cartItems) {
+    const product = productMap.get(item.product_id);
+    if (!product) {
+      throw createHttpError(400, "One or more cart products no longer exist.");
+    }
+    if (!toDatabaseFlag(product.is_active)) {
+      throw createHttpError(400, `The product "${product.name}" is no longer available.`);
+    }
+
+    const quantity = Number(item.quantity);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw createHttpError(400, "Cart contains an invalid quantity.");
+    }
+
+    const unitPrice = normalizeMoney(product.price_egp);
+    const lineTotal = normalizeMoney(unitPrice * quantity);
+    subtotal += lineTotal;
+    lines.push({
+      product_id: Number(product.id),
+      product_name: String(product.name || ""),
+      product_slug: String(product.slug || ""),
+      product_image_url: String(product.image_url || ""),
+      unit_price_egp: unitPrice,
+      quantity,
+      line_total_egp: lineTotal
+    });
+  }
+
+  return {
+    subtotal: normalizeMoney(subtotal),
+    lines
+  };
 };
 
 const createPasswordResetToken = () => crypto.randomBytes(32).toString("hex");
@@ -515,6 +855,7 @@ app.post("/api/reset-password", async (req, res) => {
 
 app.get("/api/account", requireAuthenticated, async (req, res) => {
   try {
+    await ensureOrderSchemaReady();
     const user = await loadAuthenticatedUser(req.headers?.user_id, toDatabaseFlag(req.headers?.is_admin) === 1);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -527,7 +868,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
     }
 
     const [orderRows] = await pool.query(
-      "SELECT id, status, total_egp, payment_method, shipping_name, shipping_phone, shipping_addr, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT id, order_number, status, total_egp, payment_method, shipping_name, shipping_phone, shipping_addr, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC",
       [numericUserId]
     );
 
@@ -561,6 +902,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
 
     const orders = orderRows.map((order) => ({
       id: Number(order.id),
+      order_number: String(order.order_number || ""),
       status: order.status,
       total_egp: Number(order.total_egp) || 0,
       payment_method: order.payment_method,
@@ -573,6 +915,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
 
     res.json({ user: normalizedUser, orders });
   } catch (err) {
+    logOrderError("load account orders failed", err, { user_id: req.headers?.user_id || "" });
     res.status(500).json({ error: err.message });
   }
 });
@@ -700,32 +1043,43 @@ const cartIdentifier = (req) => {
   return { type: "none", value: null };
 };
 
-const findExistingCartId = async (identifier) => {
+const findExistingCartId = async (identifier, executor = pool) => {
   if (identifier.type === "user") {
-    const [rows] = await pool.query("SELECT id FROM carts WHERE user_id = ? LIMIT 1", [identifier.value]);
+    const [rows] = await executor.query("SELECT id FROM carts WHERE user_id = ? LIMIT 1", [identifier.value]);
     return rows[0]?.id || null;
   }
   if (identifier.type === "guest") {
-    const [rows] = await pool.query("SELECT id FROM carts WHERE guest_token = ? LIMIT 1", [identifier.value]);
+    const [rows] = await executor.query("SELECT id FROM carts WHERE guest_token = ? LIMIT 1", [identifier.value]);
     return rows[0]?.id || null;
   }
   return null;
 };
 
-const getOrCreateCartId = async (identifier) => {
+const getOrCreateCartId = async (identifier, executor = pool) => {
   if (identifier.type === "user") {
-    const existingId = await findExistingCartId(identifier);
+    const existingId = await findExistingCartId(identifier, executor);
     if (existingId) return existingId;
-    const [result] = await pool.query("INSERT INTO carts (user_id) VALUES (?)", [identifier.value]);
+    const [result] = await executor.query("INSERT INTO carts (user_id) VALUES (?)", [identifier.value]);
     return result.insertId;
   }
   if (identifier.type === "guest") {
-    const existingId = await findExistingCartId(identifier);
+    const existingId = await findExistingCartId(identifier, executor);
     if (existingId) return existingId;
-    const [result] = await pool.query("INSERT INTO carts (guest_token) VALUES (?)", [identifier.value]);
+    const [result] = await executor.query("INSERT INTO carts (guest_token) VALUES (?)", [identifier.value]);
     return result.insertId;
   }
   return null;
+};
+
+const loadCartItemsByIdentifier = async (identifier, executor = pool) => {
+  if (identifier.type === "none") return [];
+  const cartId = await findExistingCartId(identifier, executor);
+  if (!cartId) return [];
+  const [rows] = await executor.query(
+    "SELECT product_id, quantity FROM cart_items WHERE cart_id = ?",
+    [cartId]
+  );
+  return sanitizeCartItems(rows);
 };
 
 const logCartError = (context, err, extra = {}) => {
@@ -793,6 +1147,301 @@ app.post("/api/cart", async (req, res) => {
   }
 });
 
+app.post("/api/orders", async (req, res) => {
+  let connection;
+  try {
+    await ensureOrderSchemaReady();
+
+    const orderPayload = validateOrderPayload(req.body);
+    const identifier = cartIdentifier(req);
+    if (identifier.type === "none") {
+      return res.status(400).json({ error: "Missing cart identity." });
+    }
+    const requestedItems = sanitizeCartItems(req.body?.items);
+    const cartItems = requestedItems.length ? requestedItems : await loadCartItemsByIdentifier(identifier);
+
+    if (!cartItems.length) {
+      return res.status(400).json({ error: "Your cart is empty." });
+    }
+
+    const productIds = [...new Set(cartItems.map((item) => item.product_id))];
+    const productMap = await loadCheckoutProducts(productIds);
+    const { subtotal, lines } = buildOrderItemsFromCart(cartItems, productMap);
+    const shipping = calculateShippingEgp(subtotal);
+    const total = normalizeMoney(subtotal + shipping);
+    const numericUserId = Number(req.headers?.user_id);
+    const userId = Number.isFinite(numericUserId) && numericUserId > 0 ? numericUserId : null;
+    const guestToken = identifier.type === "guest" ? identifier.value : null;
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const cartId = await findExistingCartId(identifier, connection);
+
+    let orderId = null;
+    let orderNumber = "";
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        orderNumber = createOrderNumber();
+        const [orderResult] = await connection.query(
+          `INSERT INTO orders (
+            order_number,
+            customer_name,
+            phone,
+            governorate,
+            district,
+            address,
+            payment_method,
+            subtotal_egp,
+            shipping_egp,
+            total_egp,
+            status,
+            user_id,
+            guest_token,
+            shipping_name,
+            shipping_phone,
+            shipping_addr,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            orderNumber,
+            orderPayload.customerName,
+            orderPayload.phone,
+            orderPayload.governorate,
+            orderPayload.district,
+            orderPayload.address,
+            orderPayload.paymentMethod,
+            subtotal,
+            shipping,
+            total,
+            "pending",
+            userId,
+            guestToken,
+            orderPayload.customerName,
+            orderPayload.phone,
+            orderPayload.address,
+          ]
+        );
+        orderId = Number(orderResult.insertId);
+        break;
+      } catch (error) {
+        if (error?.code === "ER_DUP_ENTRY" && attempt < 4) continue;
+        throw error;
+      }
+    }
+
+    if (!orderId) {
+      throw createHttpError(500, "Could not reserve an order number.");
+    }
+
+    const values = lines.map((line) => [
+      orderId,
+      line.product_id,
+      line.product_name,
+      line.product_slug,
+      line.product_image_url,
+      line.unit_price_egp,
+      line.unit_price_egp,
+      line.quantity,
+      line.line_total_egp,
+      line.line_total_egp
+    ]);
+
+    await connection.query(
+      `INSERT INTO order_items (
+        order_id,
+        product_id,
+        product_name,
+        product_slug,
+        product_image_url,
+        unit_price,
+        unit_price_egp,
+        quantity,
+        line_total,
+        line_total_egp
+      ) VALUES ?`,
+      [values]
+    );
+
+    if (cartId) {
+      await connection.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+    }
+
+    await connection.commit();
+    res.status(201).json({
+      ok: true,
+      order: {
+        id: orderId,
+        order_number: orderNumber,
+        customer_name: orderPayload.customerName,
+        phone: orderPayload.phone,
+        governorate: orderPayload.governorate,
+        district: orderPayload.district,
+        address: orderPayload.address,
+        payment_method: orderPayload.paymentMethod,
+        subtotal_egp: subtotal,
+        shipping_egp: shipping,
+        total_egp: total,
+        status: "pending",
+        items: lines
+      }
+    });
+  } catch (err) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch {}
+    }
+    logOrderError("create order failed", err, { identifier: cartIdentifier(req) });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not create order right now." });
+  } finally {
+    connection?.release();
+  }
+});
+
+app.get("/api/orders/number/:orderNumber", async (req, res) => {
+  try {
+    const orderNumber = String(req.params.orderNumber || "").trim();
+    if (!orderNumber) {
+      return res.status(400).json({ error: "Order number is required." });
+    }
+
+    let order = null;
+    const numericUserId = Number(req.headers?.user_id);
+    if (Number.isFinite(numericUserId) && numericUserId > 0) {
+      order = await loadOrderDetail("WHERE order_number = ? AND user_id = ?", [orderNumber, numericUserId]);
+    }
+
+    if (!order) {
+      const identifier = cartIdentifier(req);
+      if (identifier.type === "guest") {
+        order = await loadOrderDetail("WHERE order_number = ? AND guest_token = ?", [orderNumber, identifier.value]);
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    res.json({ order });
+  } catch (err) {
+    logOrderError("load order by number failed", err, { order_number: req.params?.orderNumber || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not load the order." });
+  }
+});
+
+app.get("/api/orders/:id", async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: "Invalid order id." });
+    }
+
+    let order = null;
+    const numericUserId = Number(req.headers?.user_id);
+    if (Number.isFinite(numericUserId) && numericUserId > 0) {
+      order = await loadOrderDetail("WHERE id = ? AND user_id = ?", [orderId, numericUserId]);
+    }
+
+    if (!order) {
+      const identifier = cartIdentifier(req);
+      if (identifier.type === "guest") {
+        order = await loadOrderDetail("WHERE id = ? AND guest_token = ?", [orderId, identifier.value]);
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    res.json({ order });
+  } catch (err) {
+    logOrderError("load order by id failed", err, { order_id: req.params?.id || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not load the order." });
+  }
+});
+
+app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
+  try {
+    await ensureOrderSchemaReady();
+    const [rows] = await pool.query(
+      `SELECT
+          id,
+          order_number,
+          customer_name,
+          phone,
+          governorate,
+          district,
+          address,
+          payment_method,
+          subtotal_egp,
+          shipping_egp,
+          total_egp,
+          status,
+          user_id,
+          guest_token,
+          created_at,
+          updated_at
+        FROM orders
+        ORDER BY created_at DESC`
+    );
+    res.json({ orders: rows.map(mapOrderRecord) });
+  } catch (err) {
+    logOrderError("load admin order list failed", err);
+    res.status(500).json({ error: "Could not load orders right now." });
+  }
+});
+
+app.get("/api/admin/orders/:id", requireAdmin, async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: "Invalid order id." });
+    }
+
+    const order = await loadOrderDetail("WHERE id = ?", [orderId]);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    res.json({ order });
+  } catch (err) {
+    logOrderError("load admin order detail failed", err, { order_id: req.params?.id || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not load the order." });
+  }
+});
+
+app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
+  try {
+    await ensureOrderSchemaReady();
+    const orderId = Number(req.params.id);
+    const status = String(req.body?.status || "").trim().toLowerCase();
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: "Invalid order id." });
+    }
+    if (!ORDER_STATUS_VALUES.has(status)) {
+      return res.status(400).json({ error: "Invalid order status." });
+    }
+
+    const [result] = await pool.query(
+      "UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?",
+      [status, orderId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    const order = await loadOrderDetail("WHERE id = ?", [orderId]);
+    res.json({ ok: true, order });
+  } catch (err) {
+    logOrderError("update order status failed", err, { order_id: req.params?.id || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not update the order status." });
+  }
+});
+
 for (const [routePath, fileName] of pageRoutes.entries()) {
   app.get(routePath, (_req, res) => {
     res.sendFile(path.join(projectRoot, fileName));
@@ -801,4 +1450,11 @@ for (const [routePath, fileName] of pageRoutes.entries()) {
 
 app.listen(PORT, () => {
   console.log(`API ready on port ${PORT}`);
+  ensureOrderSchemaReady()
+    .then(() => {
+      console.log("[orders] schema ready");
+    })
+    .catch((error) => {
+      logOrderError("schema bootstrap failed", error);
+    });
 });
