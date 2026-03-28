@@ -874,15 +874,64 @@
     const status = qs("[data-checkout-status]");
     const form = qs("[data-checkout-form]");
     if (!button || !status || !form) return;
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       if (!form.reportValidity()) return;
-      status.hidden = false;
-      status.textContent = "Order submitted successfully.";
-      form.reset();
-      state.cart = [];
-      persistCart();
-      scheduleCartSave();
-      refreshCartUi();
+
+      if (!state.cart.length) {
+        status.hidden = false;
+        status.dataset.tone = "error";
+        status.textContent = "Your cart is empty.";
+        return;
+      }
+
+      const payload = {
+        full_name: String(form.elements.full_name?.value || "").trim(),
+        phone: String(form.elements.phone?.value || "").trim(),
+        city: String(form.elements.city?.value || "").trim(),
+        district: String(form.elements.district?.value || "").trim(),
+        address: String(form.elements.address?.value || "").trim(),
+        payment_method: "cash_on_delivery",
+        items: state.cart.map((line) => ({
+          product_id: Number(line.id),
+          quantity: Number(line.qty)
+        }))
+      };
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+      status.hidden = true;
+      status.textContent = "";
+      delete status.dataset.tone;
+
+      try {
+        const response = await fetch(`${API_BASE}/api/orders`, {
+          method: "POST",
+          headers: cartHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || "Could not submit your order right now.");
+        }
+
+        status.hidden = false;
+        status.dataset.tone = "success";
+        status.textContent = data?.order?.order_number
+          ? `Order submitted successfully. Order number: ${data.order.order_number}`
+          : "Order submitted successfully.";
+        form.reset();
+        state.cart = [];
+        persistCart();
+        refreshCartUi();
+      } catch (error) {
+        status.hidden = false;
+        status.dataset.tone = "error";
+        status.textContent = error.message || "Could not submit your order right now.";
+      } finally {
+        button.disabled = false;
+        button.textContent = "Submit Order";
+      }
     });
   };
 
