@@ -107,28 +107,42 @@ const syncAdminNavLinks = () => {
   const currentPage = document.body?.dataset?.page;
 
   document.querySelectorAll(".mock-nav").forEach((nav) => {
-    let adminLink = nav.querySelector("[data-admin-nav-link]");
+    const adminLinks = [
+      {
+        key: "products",
+        href: "admin-products.html",
+        label: "Manage Products",
+        isActive: currentPage === "admin-products" || currentPage === "manage"
+      },
+      {
+        key: "orders",
+        href: "admin-orders.html",
+        label: "Order Details",
+        isActive: currentPage === "admin-orders" || currentPage === "admin-order"
+      }
+    ];
 
     if (!isAdmin) {
-      adminLink?.remove();
+      nav.querySelectorAll("[data-admin-nav-link]").forEach((link) => link.remove());
       return;
     }
 
-    if (!(adminLink instanceof HTMLAnchorElement)) {
-      adminLink = document.createElement("a");
-      adminLink.href = "admin-products.html";
-      adminLink.textContent = "Manage Products";
-      adminLink.dataset.adminOnly = "true";
-      adminLink.dataset.adminNavLink = "true";
-      nav.append(adminLink);
-    }
+    adminLinks.forEach(({ key, href, label, isActive }) => {
+      let adminLink = nav.querySelector(`[data-admin-nav-link="${key}"]`);
 
-    adminLink.classList.toggle(
-      "is-active",
-      currentPage === "admin-products" || currentPage === "manage" || currentPage === "admin-orders" || currentPage === "admin-order"
-    );
-    adminLink.removeAttribute("hidden");
-    adminLink.style.display = "";
+      if (!(adminLink instanceof HTMLAnchorElement)) {
+        adminLink = document.createElement("a");
+        adminLink.dataset.adminOnly = "true";
+        adminLink.dataset.adminNavLink = key;
+        nav.append(adminLink);
+      }
+
+      adminLink.href = href;
+      adminLink.textContent = label;
+      adminLink.classList.toggle("is-active", isActive);
+      adminLink.removeAttribute("hidden");
+      adminLink.style.display = "";
+    });
   });
 };
 
