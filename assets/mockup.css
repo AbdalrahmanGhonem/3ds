@@ -20,7 +20,7 @@ button, input, textarea { font: inherit; }
 .mock-shell { min-height: 100vh; }
 .mock-container { width: min(100%, 1152px); margin: 0 auto; padding-inline: 16px; }
 .mock-header { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--mock-border); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-.mock-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0 14px; }
+.mock-header__inner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0 14px; }
 .mock-brand {
   display: inline-flex;
   align-items: center;
@@ -326,6 +326,39 @@ button, input, textarea { font: inherit; }
   .mock-contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mock-footer__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 40px 24px 42px; }
 }
+@media (max-width: 767px) {
+  .mock-nav {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: calc(100% + 8px);
+    display: none;
+    grid-auto-flow: row;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid rgba(226, 232, 240, 0.96);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+    z-index: 40;
+    backdrop-filter: blur(12px);
+  }
+  .mock-header.is-mobile-menu-open .mock-nav {
+    display: grid;
+  }
+  .mock-nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border-radius: 14px;
+    padding: 0 14px;
+    background: transparent;
+  }
+  .mock-nav a:hover,
+  .mock-nav a.is-active {
+    background: rgba(231, 243, 246, 0.72);
+  }
+}
 @media (max-width: 640px) {
   .mock-container { padding-inline: 14px; }
   .mock-header {
@@ -356,6 +389,10 @@ button, input, textarea { font: inherit; }
   }
   .mock-header__icons { gap: 12px; }
   .mock-icon-button { width: 22px; height: 22px; }
+  .mock-nav {
+    left: 14px;
+    right: 14px;
+  }
   .mock-cart-count {
     right: -7px;
     top: -7px;

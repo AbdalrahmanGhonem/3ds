@@ -101,6 +101,66 @@ const bindHeaderActions = () => {
   });
 };
 
+const bindMobileMenu = () => {
+  const closeAllMenus = () => {
+    document.querySelectorAll(".mock-header.is-mobile-menu-open").forEach((header) => {
+      header.classList.remove("is-mobile-menu-open");
+      const button = header.querySelector(".mock-menu-button");
+      if (button instanceof HTMLButtonElement) {
+        button.setAttribute("aria-expanded", "false");
+      }
+    });
+  };
+
+  document.querySelectorAll(".mock-header").forEach((header) => {
+    const menuButton = header.querySelector(".mock-menu-button");
+    const nav = header.querySelector(".mock-nav");
+    if (!(menuButton instanceof HTMLButtonElement) || !(nav instanceof HTMLElement)) return;
+
+    menuButton.setAttribute("aria-expanded", "false");
+    menuButton.setAttribute("aria-controls", "mobile-primary-nav");
+    nav.id = "mobile-primary-nav";
+
+    menuButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = header.classList.contains("is-mobile-menu-open");
+      closeAllMenus();
+      if (!isOpen) {
+        header.classList.add("is-mobile-menu-open");
+        menuButton.setAttribute("aria-expanded", "true");
+      }
+    });
+
+    nav.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target instanceof HTMLAnchorElement) {
+        closeAllMenus();
+      }
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (!target.closest(".mock-header")) {
+      closeAllMenus();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAllMenus();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 768) {
+      closeAllMenus();
+    }
+  });
+};
+
 const syncAdminNavLinks = () => {
   const user = currentUser();
   const isAdmin = Boolean(user?.is_admin);
@@ -237,6 +297,7 @@ applyAdminVisibility();
 syncAuthLinks();
 bindAuthLinks();
 bindHeaderActions();
+bindMobileMenu();
 renderStorefrontIcons();
 syncLocalCartCount();
 
