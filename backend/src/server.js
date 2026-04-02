@@ -528,6 +528,7 @@ const mapOrderRecord = (row) => ({
   status: String(row.status || "pending"),
   user_id: row.user_id == null ? null : Number(row.user_id),
   guest_token: String(row.guest_token || ""),
+  item_count: Number(row.item_count) || 0,
   created_at: row.created_at,
   updated_at: row.updated_at
 });
@@ -563,7 +564,9 @@ const groupOrderItems = (rows = []) => {
       product_slug: String(row.product_slug || ""),
       product_image_url: String(row.product_image_url || ""),
       quantity: Number(row.quantity) || 0,
+      unit_price: normalizeMoney(row.unit_price_egp),
       unit_price_egp: normalizeMoney(row.unit_price_egp),
+      line_total: normalizeMoney(row.line_total_egp),
       line_total_egp: normalizeMoney(row.line_total_egp)
     });
     itemsByOrder.set(row.order_id, items);
@@ -586,6 +589,7 @@ const loadOrderDetail = async (whereClause, params = []) => {
         subtotal_egp,
         shipping_egp,
         total_egp,
+        (SELECT COUNT(*) FROM order_items WHERE order_id = orders.id) AS item_count,
         status,
         user_id,
         guest_token,

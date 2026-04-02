@@ -132,6 +132,16 @@
       return;
     }
 
+    const orderItemCount = (order) => {
+      if (Number.isFinite(Number(order?.item_count)) && Number(order.item_count) > 0) {
+        return Number(order.item_count);
+      }
+      if (Array.isArray(order?.items)) {
+        return order.items.length;
+      }
+      return 0;
+    };
+
     list.innerHTML = state.orders
       .map(
         (order) => `
@@ -150,7 +160,7 @@
               <span>${formatDate(order.created_at)}</span>
             </div>
             <div class="mock-admin-order__footer">
-              <span>${Array.isArray(order.items) ? order.items.length : 0} item${Array.isArray(order.items) && order.items.length === 1 ? "" : "s"}</span>
+              <span>${orderItemCount(order)} item${orderItemCount(order) === 1 ? "" : "s"}</span>
               <span class="mock-admin-order__view">View details</span>
             </div>
           </button>
