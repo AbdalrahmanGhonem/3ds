@@ -290,6 +290,7 @@ const ORDER_SHIPPING_THRESHOLD_EGP = 500;
 const ORDER_SHIPPING_FEE_EGP = 60;
 
 let orderSchemaPromise = null;
+let cartSchemaPromise = null;
 
 const createHttpError = (status, message) => {
   const error = new Error(message);
@@ -346,6 +347,34 @@ const addColumnIfMissing = async (tableName, columns, columnName, definitionSql)
 const ensureIndex = async (tableName, indexName, definitionSql) => {
   if (await indexExists(tableName, indexName)) return;
   await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} ADD ${definitionSql}`);
+};
+
+const ensureCartSchema = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS carts (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id BIGINT UNSIGNED NULL,
+      guest_token VARCHAR(255) DEFAULT NULL,
+      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY user_id (user_id),
+      UNIQUE KEY guest_token (guest_token)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  const cartColumns = await loadTableColumns("carts");
+  await addColumnIfMissing("carts", cartColumns, "guest_token", "guest_token VARCHAR(255) NULL AFTER user_id");
+  await pool.query("ALTER TABLE carts MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
+};
+
+const ensureCartSchemaReady = async () => {
+  if (!cartSchemaPromise) {
+    cartSchemaPromise = ensureCartSchema().catch((error) => {
+      cartSchemaPromise = null;
+      throw error;
+    });
+  }
+  return cartSchemaPromise;
 };
 
 const ensureOrderSchema = async () => {
@@ -1095,6 +1124,7 @@ const logCartError = (context, err, extra = {}) => {
 
 app.get("/api/cart", async (req, res) => {
   try {
+    await ensureCartSchemaReady();
     const identifier = cartIdentifier(req);
     if (identifier.type === "none") return res.json({ items: [] });
     const cartId = await findExistingCartId(identifier);
@@ -1117,6 +1147,7 @@ app.get("/api/cart", async (req, res) => {
 
 app.post("/api/cart", async (req, res) => {
   try {
+    await ensureCartSchemaReady();
     const identifier = cartIdentifier(req);
     if (identifier.type === "none") {
       return res.status(400).json({ error: "Missing cart identity" });
@@ -1150,6 +1181,7 @@ app.post("/api/cart", async (req, res) => {
 app.post("/api/orders", async (req, res) => {
   let connection;
   try {
+    await ensureCartSchemaReady();
     await ensureOrderSchemaReady();
 
     const identifier = cartIdentifier(req);
@@ -1490,9 +1522,10 @@ for (const [routePath, fileName] of pageRoutes.entries()) {
 
 app.listen(PORT, () => {
   console.log(`API ready on port ${PORT}`);
-  ensureOrderSchemaReady()
+  Promise.all([ensureCartSchemaReady(), ensureOrderSchemaReady()])
     .then(() => {
       console.log("[orders] schema ready");
+      console.log("[cart] schema ready");
     })
     .catch((error) => {
       logOrderError("schema bootstrap failed", error);
