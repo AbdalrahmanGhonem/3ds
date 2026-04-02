@@ -227,6 +227,44 @@ button, input, textarea { font: inherit; }
 .mock-footer h3 { font-size: 1.5rem; font-weight: 900; }
 .mock-footer p { margin: 0; color: #64748b; font-size: .875rem; line-height: 1.75; }
 .mock-footer__links { display: grid; gap: 8px; margin-top: 13px; }
+.mock-footer__social {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.mock-social-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--mock-border);
+  background: var(--mock-accent-soft);
+  color: #2f6f7f;
+  transition: transform .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+.mock-social-button:hover {
+  transform: translateY(-1px) scale(1.04);
+  background: #d8edf2;
+  border-color: #bfdde5;
+  color: var(--mock-text);
+}
+.mock-social-button:focus-visible {
+  outline: 2px solid rgba(111, 168, 184, 0.45);
+  outline-offset: 3px;
+}
+.mock-social-button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .mock-empty-state { padding: 24px; color: #64748b; }
 .mock-empty-state p { margin: 0; }
 .mock-empty-button { margin-top: 16px; min-height: 46px; padding-inline: 22px; }
