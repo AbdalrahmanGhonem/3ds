@@ -608,6 +608,18 @@ button, input, textarea { font: inherit; }
   color: #475569;
   font-size: .9rem;
 }
+.mock-admin-order__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #64748b;
+  font-size: .86rem;
+  font-weight: 700;
+}
+.mock-admin-order__view {
+  color: var(--mock-text);
+}
 .mock-admin-product {
   display: grid;
   gap: 16px;

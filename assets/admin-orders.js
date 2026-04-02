@@ -149,6 +149,10 @@
               <span>${titleCase(order.payment_method)}</span>
               <span>${formatDate(order.created_at)}</span>
             </div>
+            <div class="mock-admin-order__footer">
+              <span>${Array.isArray(order.items) ? order.items.length : 0} item${Array.isArray(order.items) && order.items.length === 1 ? "" : "s"}</span>
+              <span class="mock-admin-order__view">View details</span>
+            </div>
           </button>
         `
       )
@@ -182,12 +186,17 @@
             <span class="mock-pill-badge">${titleCase(order.status)}</span>
           </div>
           <div class="mock-admin-order-summary__grid">
+            <p><strong>Order Number:</strong> ${order.order_number || order.id}</p>
+            <p><strong>Created:</strong> ${formatDate(order.created_at)}</p>
             <p><strong>Customer:</strong> ${order.customer_name}</p>
             <p><strong>Phone:</strong> ${order.phone}</p>
             <p><strong>Governorate:</strong> ${order.governorate || "-"}</p>
             <p><strong>District:</strong> ${order.district || "-"}</p>
+            <p><strong>Subtotal:</strong> ${formatMoney(order.subtotal_egp)}</p>
+            <p><strong>Shipping:</strong> ${Number(order.shipping_egp) === 0 ? "Free" : formatMoney(order.shipping_egp)}</p>
             <p><strong>Payment:</strong> ${titleCase(order.payment_method)}</p>
             <p><strong>Total:</strong> ${formatMoney(order.total_egp)}</p>
+            <p><strong>Status:</strong> ${titleCase(order.status)}</p>
             <p class="mock-admin-order-summary__address"><strong>Address:</strong> ${order.address}</p>
           </div>
         </div>
