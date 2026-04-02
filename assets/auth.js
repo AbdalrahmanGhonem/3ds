@@ -123,7 +123,10 @@ const syncAdminNavLinks = () => {
       nav.append(adminLink);
     }
 
-    adminLink.classList.toggle("is-active", currentPage === "admin-products" || currentPage === "manage");
+    adminLink.classList.toggle(
+      "is-active",
+      currentPage === "admin-products" || currentPage === "manage" || currentPage === "admin-orders" || currentPage === "admin-order"
+    );
     adminLink.removeAttribute("hidden");
     adminLink.style.display = "";
   });
@@ -133,7 +136,7 @@ const applyAdminVisibility = () => {
   const user = currentUser();
   const isAdmin = Boolean(user?.is_admin);
   const isLoggedIn = Boolean(user?.id);
-  const adminPages = new Set(["manage", "admin-products"]);
+  const adminPages = new Set(["manage", "admin-products", "admin-orders", "admin-order"]);
   const accountPages = new Set(["account"]);
   syncAdminNavLinks();
   document.querySelectorAll("[data-admin-only]").forEach((el) => {

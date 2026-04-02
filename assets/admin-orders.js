@@ -58,6 +58,8 @@
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
 
+  const orderDetailHref = (orderId) => `admin-order.html?id=${encodeURIComponent(orderId)}`;
+
   const setStatus = (message, tone = "info") => {
     const status = qs("[data-admin-status]");
     if (!status) return;
@@ -145,25 +147,27 @@
     list.innerHTML = state.orders
       .map(
         (order) => `
-          <button class="mock-admin-order${state.selectedOrderId === order.id ? " is-selected" : ""}" type="button" data-order-id="${order.id}">
-            <div class="mock-admin-order__top">
-              <div>
-                <h3>#${order.order_number || order.id}</h3>
-                <p>${order.customer_name || "Unknown customer"}</p>
+          <article class="mock-admin-order${state.selectedOrderId === order.id ? " is-selected" : ""}">
+            <button class="mock-admin-order__select" type="button" data-order-id="${order.id}">
+              <div class="mock-admin-order__top">
+                <div>
+                  <h3>#${order.order_number || order.id}</h3>
+                  <p>${order.customer_name || "Unknown customer"}</p>
+                </div>
+                <span class="mock-pill-badge">${titleCase(order.status)}</span>
               </div>
-              <span class="mock-pill-badge">${titleCase(order.status)}</span>
-            </div>
-            <div class="mock-admin-order__meta">
-              <span>${order.phone || "-"}</span>
-              <span>${formatMoney(order.total_egp)}</span>
-              <span>${titleCase(order.payment_method)}</span>
-              <span>${formatDate(order.created_at)}</span>
-            </div>
+              <div class="mock-admin-order__meta">
+                <span>${order.phone || "-"}</span>
+                <span>${formatMoney(order.total_egp)}</span>
+                <span>${titleCase(order.payment_method)}</span>
+                <span>${formatDate(order.created_at)}</span>
+              </div>
+            </button>
             <div class="mock-admin-order__footer">
               <span>${orderItemCount(order)} item${orderItemCount(order) === 1 ? "" : "s"}</span>
-              <span class="mock-admin-order__view">View details</span>
+              <a class="mock-admin-order__view" href="${orderDetailHref(order.id)}">View details</a>
             </div>
-          </button>
+          </article>
         `
       )
       .join("");

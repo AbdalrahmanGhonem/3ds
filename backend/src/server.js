@@ -75,6 +75,8 @@ const pageRoutes = new Map([
   ["/admin-products.html", "admin-products.html"],
   ["/admin-orders", "admin-orders.html"],
   ["/admin-orders.html", "admin-orders.html"],
+  ["/admin-order", "admin-order.html"],
+  ["/admin-order.html", "admin-order.html"],
   ["/order-success", "order-success.html"],
   ["/order-success.html", "order-success.html"],
   ["/checkout", "checkout.html"],

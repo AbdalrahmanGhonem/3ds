@@ -573,6 +573,18 @@ button, input, textarea { font: inherit; }
   cursor: pointer;
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
+.mock-admin-order__select {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
 .mock-admin-order:hover {
   border-color: rgba(15, 23, 42, 0.18);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
@@ -619,6 +631,10 @@ button, input, textarea { font: inherit; }
 }
 .mock-admin-order__view {
   color: var(--mock-text);
+  text-decoration: none;
+}
+.mock-admin-order__view:hover {
+  text-decoration: underline;
 }
 .mock-admin-product {
   display: grid;
@@ -794,6 +810,29 @@ button, input, textarea { font: inherit; }
 .mock-admin-order-item__body p {
   color: #64748b;
   font-size: .9rem;
+}
+.mock-admin-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.mock-admin-detail-header__copy {
+  display: grid;
+  gap: 8px;
+}
+.mock-admin-detail-header__copy h1,
+.mock-admin-detail-header__copy p {
+  margin: 0;
+}
+.mock-admin-detail-header__copy p {
+  color: #64748b;
+}
+.mock-admin-detail-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .mock-success-layout {
   display: grid;
