@@ -75,6 +75,8 @@ const pageRoutes = new Map([
   ["/admin-products.html", "admin-products.html"],
   ["/admin-orders", "admin-orders.html"],
   ["/admin-orders.html", "admin-orders.html"],
+  ["/order-success", "order-success.html"],
+  ["/order-success.html", "order-success.html"],
   ["/checkout", "checkout.html"],
   ["/checkout.html", "checkout.html"]
 ]);
@@ -285,7 +287,8 @@ const loadAuthenticatedUser = async (userId, isAdmin) => {
 };
 
 const ORDER_STATUS_VALUES = new Set(["pending", "confirmed", "shipped", "delivered", "cancelled"]);
-const ORDER_PAYMENT_METHOD = "cash_on_delivery";
+const ORDER_DEFAULT_PAYMENT_METHOD = "cash_on_delivery";
+const ORDER_PAYMENT_METHOD_VALUES = new Set(["cash_on_delivery", "vodafone_cash", "instapay", "stripe"]);
 const ORDER_SHIPPING_THRESHOLD_EGP = 500;
 const ORDER_SHIPPING_FEE_EGP = 60;
 
@@ -474,7 +477,7 @@ const validateOrderPayload = (body = {}) => {
   const governorate = String(body.governorate || body.city || "").trim();
   const district = String(body.district || "").trim();
   const address = String(body.address || "").trim();
-  const paymentMethod = String(body.payment_method || ORDER_PAYMENT_METHOD).trim().toLowerCase();
+  const paymentMethod = String(body.payment_method || ORDER_DEFAULT_PAYMENT_METHOD).trim().toLowerCase();
   const phoneDigits = phone.replace(/\D/g, "");
 
   if (customerName.length < 2) throw createHttpError(400, "Customer name is required.");
@@ -482,8 +485,8 @@ const validateOrderPayload = (body = {}) => {
   if (governorate.length < 2) throw createHttpError(400, "Governorate is required.");
   if (district.length < 2) throw createHttpError(400, "District is required.");
   if (address.length < 5) throw createHttpError(400, "Address is required.");
-  if (paymentMethod !== ORDER_PAYMENT_METHOD) {
-    throw createHttpError(400, "Only Cash on Delivery is supported right now.");
+  if (!ORDER_PAYMENT_METHOD_VALUES.has(paymentMethod)) {
+    throw createHttpError(400, "Invalid payment method.");
   }
 
   return {
@@ -492,7 +495,7 @@ const validateOrderPayload = (body = {}) => {
     governorate,
     district,
     address,
-    paymentMethod: ORDER_PAYMENT_METHOD
+    paymentMethod
   };
 };
 
@@ -518,7 +521,7 @@ const mapOrderRecord = (row) => ({
   governorate: String(row.governorate || ""),
   district: String(row.district || ""),
   address: String(row.address || row.shipping_addr || ""),
-  payment_method: String(row.payment_method || ORDER_PAYMENT_METHOD),
+  payment_method: String(row.payment_method || ORDER_DEFAULT_PAYMENT_METHOD),
   subtotal_egp: normalizeMoney(row.subtotal_egp),
   shipping_egp: normalizeMoney(row.shipping_egp),
   total_egp: normalizeMoney(row.total_egp),
@@ -1434,9 +1437,28 @@ app.get("/api/orders/:id", async (req, res) => {
   }
 });
 
-app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
+app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   try {
     await ensureOrderSchemaReady();
+    const status = String(req.query?.status || "").trim().toLowerCase();
+    const search = String(req.query?.q || "").trim();
+    const whereClauses = [];
+    const values = [];
+
+    if (status) {
+      if (!ORDER_STATUS_VALUES.has(status)) {
+        return res.status(400).json({ error: "Invalid order status filter." });
+      }
+      whereClauses.push("status = ?");
+      values.push(status);
+    }
+
+    if (search) {
+      whereClauses.push("(order_number LIKE ? OR customer_name LIKE ?)");
+      values.push(`%${search}%`, `%${search}%`);
+    }
+
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
     const [rows] = await pool.query(
       `SELECT
           id,
@@ -1456,7 +1478,9 @@ app.get("/api/admin/orders", requireAdmin, async (_req, res) => {
           created_at,
           updated_at
         FROM orders
-        ORDER BY created_at DESC`
+        ${whereSql}
+        ORDER BY created_at DESC`,
+      values
     );
     res.json({ orders: rows.map(mapOrderRecord) });
   } catch (err) {

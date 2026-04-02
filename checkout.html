@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/mockup.css?v=8">
+    <link rel="stylesheet" href="assets/mockup.css?v=9">
   </head>
   <body class="mockup-site" data-page="checkout">
     <div class="mock-shell">
@@ -43,13 +43,55 @@
                   <input class="mock-input" type="text" name="city" placeholder="Governorate / City" required>
                   <input class="mock-input" type="text" name="district" placeholder="Area / District" required>
                   <textarea class="mock-textarea mock-span-2" name="address" placeholder="Full Address" required></textarea>
+                  <div class="mock-payment-options mock-span-2" data-payment-options>
+                    <label class="mock-payment-option is-selected">
+                      <input type="radio" name="payment_method" value="cash_on_delivery" checked>
+                      <div class="mock-payment-option__content">
+                        <div>
+                          <p class="mock-payment-option__title">Cash on Delivery</p>
+                          <p class="mock-payment-option__subtitle">Fully working now</p>
+                        </div>
+                        <span class="mock-pill-badge">Available</span>
+                      </div>
+                    </label>
+                    <label class="mock-payment-option">
+                      <input type="radio" name="payment_method" value="vodafone_cash">
+                      <div class="mock-payment-option__content">
+                        <div>
+                          <p class="mock-payment-option__title">Vodafone Cash</p>
+                          <p class="mock-payment-option__subtitle">Manual payment confirmation after order</p>
+                        </div>
+                        <span class="mock-pill-badge">Manual</span>
+                      </div>
+                    </label>
+                    <label class="mock-payment-option">
+                      <input type="radio" name="payment_method" value="instapay">
+                      <div class="mock-payment-option__content">
+                        <div>
+                          <p class="mock-payment-option__title">Instapay</p>
+                          <p class="mock-payment-option__subtitle">Manual payment confirmation after order</p>
+                        </div>
+                        <span class="mock-pill-badge">Manual</span>
+                      </div>
+                    </label>
+                    <label class="mock-payment-option">
+                      <input type="radio" name="payment_method" value="stripe">
+                      <div class="mock-payment-option__content">
+                        <div>
+                          <p class="mock-payment-option__title">Stripe</p>
+                          <p class="mock-payment-option__subtitle">Saved as preference only for now</p>
+                        </div>
+                        <span class="mock-pill-badge">Prep Only</span>
+                      </div>
+                    </label>
+                  </div>
                 </form>
                 <div class="mock-payment-card">
                   <div>
                     <p class="mock-payment-card__title">Payment Method</p>
-                    <p class="mock-payment-card__subtitle">Cash on Delivery</p>
+                    <p class="mock-payment-card__subtitle" data-payment-method-copy>Cash on Delivery is fully supported right now.</p>
                   </div>
-                  <span class="mock-pill-badge">Available</span>
+                  <span class="mock-pill-badge" data-payment-method-badge>Available</span>
                 </div>
                 <div class="mock-check-list">
                   <p>✔ Delivery within 2-3 days</p>
@@ -99,7 +141,7 @@
       </footer>
     </div>
 
-    <script src="assets/mockup.js?v=6" defer></script>
+    <script src="assets/mockup.js?v=7" defer></script>
     <script src="assets/auth.js?v=9" defer></script>
   </body>
 </html>

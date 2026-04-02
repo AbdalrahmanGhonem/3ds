@@ -14,6 +14,30 @@
     : window.__API_BASE || (hasHttpOrigin ? origin : FALLBACK_API_BASE);
   const PRODUCT_SOURCE = "/assets/products.json";
   const PRODUCT_IMAGE_FALLBACK = "/assets/hero-keychain.svg";
+  const ORDER_SUCCESS_STORAGE_KEY = "last_order_success_v1";
+  const ORDER_WHATSAPP_NUMBER = String(window.__ORDER_WHATSAPP_NUMBER || "+201000000000").replace(/\D/g, "");
+  const PAYMENT_METHODS = {
+    cash_on_delivery: {
+      label: "Cash on Delivery",
+      badge: "Available",
+      description: "Cash on Delivery is fully supported right now."
+    },
+    vodafone_cash: {
+      label: "Vodafone Cash",
+      badge: "Manual",
+      description: "Your order is saved and the payment step is confirmed manually after placement."
+    },
+    instapay: {
+      label: "Instapay",
+      badge: "Manual",
+      description: "Your order is saved and the payment step is confirmed manually after placement."
+    },
+    stripe: {
+      label: "Stripe",
+      badge: "Prep Only",
+      description: "Stripe is stored as your preferred payment method. No online charge is taken yet."
+    }
+  };
 
   const CART_STORAGE_KEY = "cart";
   const GUEST_CART_KEY = "guest_cart_token";
@@ -60,6 +84,16 @@
   const iconMarkup = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || ""}</svg>`;
   const formatMoney = (amount) => `${Number(amount || 0).toLocaleString("en-EG")} EGP`;
   const toBoolean = (value) => value === true || value === 1 || value === "1" || String(value).toLowerCase() === "true";
+  const currentPage = () => document.body?.dataset.page || "";
+  const formatPaymentMethod = (value) =>
+    PAYMENT_METHODS[String(value || "").trim().toLowerCase()]?.label ||
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  const getPaymentMethodMeta = (value) =>
+    PAYMENT_METHODS[String(value || "").trim().toLowerCase()] || PAYMENT_METHODS.cash_on_delivery;
   const featuredProducts = () => state.products.filter((product) => product.featured === true);
   const isExternalImageUrl = (value) => /^(?:[a-z]+:)?\/\//i.test(String(value || "").trim());
   const isDirectImageSource = (value) => /^(?:data:|blob:)/i.test(String(value || "").trim());
@@ -424,6 +458,23 @@
 
   const persistCart = () => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
+  };
+
+  const persistSuccessfulOrder = (order) => {
+    try {
+      sessionStorage.setItem(ORDER_SUCCESS_STORAGE_KEY, JSON.stringify({
+        order,
+        saved_at: Date.now()
+      }));
+    } catch {}
+  };
+
+  const readSuccessfulOrder = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem(ORDER_SUCCESS_STORAGE_KEY) || "{}")?.order || null;
+    } catch {
+      return null;
+    }
   };
 
   let cartSaveTimer = null;
@@ -823,6 +874,160 @@
     `;
   };
 
+  const buildWhatsAppMessage = (order) => {
+    if (!order) return "";
+    const items = Array.isArray(order.items) ? order.items : [];
+    const lines = [
+      "New 3DS Order",
+      `Order Number: ${order.order_number || order.id || "-"}`,
+      `Customer: ${order.customer_name || "-"}`,
+      `Phone: ${order.phone || "-"}`,
+      `Address: ${[order.address, order.district, order.governorate].filter(Boolean).join(", ") || "-"}`,
+      `Payment Method: ${formatPaymentMethod(order.payment_method)}`,
+      "",
+      "Items:",
+      ...items.map((item) => `- ${item.product_name} x ${item.quantity} = ${formatMoney(item.line_total_egp)}`),
+      "",
+      `Subtotal: ${formatMoney(order.subtotal_egp)}`,
+      `Shipping: ${Number(order.shipping_egp) === 0 ? "Free" : formatMoney(order.shipping_egp)}`,
+      `Total: ${formatMoney(order.total_egp)}`
+    ];
+    return lines.join("\n");
+  };
+
+  const createWhatsAppUrl = (order) => {
+    if (!ORDER_WHATSAPP_NUMBER) return "";
+    const message = buildWhatsAppMessage(order);
+    if (!message) return "";
+    return `https://wa.me/${ORDER_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  };
+
+  const loadOrderForSuccessPage = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const orderNumber = String(params.get("order_number") || "").trim();
+    const savedOrder = readSuccessfulOrder();
+
+    if (savedOrder && (!orderNumber || savedOrder.order_number === orderNumber)) {
+      return savedOrder;
+    }
+
+    if (!orderNumber) return null;
+
+    const response = await fetch(`${API_BASE}/api/orders/number/${encodeURIComponent(orderNumber)}`, {
+      headers: cartHeaders(),
+      cache: "no-store"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || "Could not load your order details.");
+    }
+    if (data?.order) persistSuccessfulOrder(data.order);
+    return data?.order || null;
+  };
+
+  const renderOrderSuccessPage = async () => {
+    const wrap = qs("#order-success-content");
+    if (!wrap) return;
+
+    wrap.innerHTML = `
+      <article class="mock-surface-card">
+        <div class="mock-surface-card__content mock-simple-content">
+          <p class="mock-page-subtitle">Loading your order summary...</p>
+        </div>
+      </article>
+    `;
+
+    try {
+      const order = await loadOrderForSuccessPage();
+      if (!order) {
+        wrap.innerHTML = `
+          <article class="mock-surface-card">
+            <div class="mock-surface-card__content mock-simple-content mock-success-card">
+              <h1 class="mock-page-title">Order Summary</h1>
+              <p class="mock-success-copy">We could not find a recent order summary on this device.</p>
+              <div class="mock-success-actions">
+                <a href="shop.html" class="mock-primary-button">Back to Shop</a>
+              </div>
+            </div>
+          </article>
+        `;
+        return;
+      }
+
+      const paymentMeta = getPaymentMethodMeta(order.payment_method);
+      const whatsappUrl = createWhatsAppUrl(order);
+      wrap.innerHTML = `
+        <div class="mock-success-layout">
+          <article class="mock-surface-card">
+            <div class="mock-surface-card__content mock-simple-content mock-success-card">
+              <div class="mock-success-hero">
+                <p class="mock-success-kicker">Order placed successfully</p>
+                <h1 class="mock-page-title">Thanks, ${order.customer_name || "there"}.</h1>
+                <p class="mock-success-copy">Your order is saved in the system. Keep the order number below in case you need support or want to follow up on WhatsApp.</p>
+              </div>
+              <div class="mock-success-grid">
+                <div class="mock-success-stat">
+                  <span>Order Number</span>
+                  <strong>${order.order_number || order.id || "-"}</strong>
+                </div>
+                <div class="mock-success-stat">
+                  <span>Total</span>
+                  <strong>${formatMoney(order.total_egp)}</strong>
+                </div>
+                <div class="mock-success-stat">
+                  <span>Payment Method</span>
+                  <strong>${formatPaymentMethod(order.payment_method)}</strong>
+                </div>
+              </div>
+              <p class="mock-success-note">${paymentMeta.description}</p>
+              <div class="mock-success-actions">
+                <a href="shop.html" class="mock-primary-button">Back to Shop</a>
+                ${whatsappUrl ? `<a href="${whatsappUrl}" class="mock-secondary-button" target="_blank" rel="noreferrer">Send on WhatsApp</a>` : ""}
+              </div>
+            </div>
+          </article>
+          <article class="mock-surface-card">
+            <div class="mock-surface-card__content mock-simple-content mock-success-card">
+              <h2 class="mock-summary-title">Order Details</h2>
+              <div class="mock-success-items">
+                ${(Array.isArray(order.items) ? order.items : [])
+                  .map(
+                    (item) => `
+                      <div class="mock-success-item">
+                        <div>
+                          <strong>${item.product_name}</strong>
+                          <p>${formatMoney(item.unit_price_egp)} x ${item.quantity}</p>
+                        </div>
+                        <strong>${formatMoney(item.line_total_egp)}</strong>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+              <div class="mock-summary-lines">
+                <div class="mock-summary-line"><span>Subtotal</span><span>${formatMoney(order.subtotal_egp)}</span></div>
+                <div class="mock-summary-line"><span>Shipping</span><span>${Number(order.shipping_egp) === 0 ? "Free" : formatMoney(order.shipping_egp)}</span></div>
+                <div class="mock-summary-line mock-summary-line--total"><span>Total</span><span>${formatMoney(order.total_egp)}</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      `;
+    } catch (error) {
+      wrap.innerHTML = `
+        <article class="mock-surface-card">
+          <div class="mock-surface-card__content mock-simple-content mock-success-card">
+            <h1 class="mock-page-title">Order Summary</h1>
+            <p class="mock-success-copy">${error.message || "Could not load your order details."}</p>
+            <div class="mock-success-actions">
+              <a href="shop.html" class="mock-primary-button">Back to Shop</a>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+  };
+
   const renderAboutPage = () => {
     const wrap = qs("#about-trust-grid");
     if (!wrap) return;
@@ -869,6 +1074,32 @@
     });
   };
 
+  const bindPaymentMethodControls = () => {
+    const options = qsa(".mock-payment-option");
+    if (!options.length) return;
+    const subtitle = qs("[data-payment-method-copy]");
+    const badge = qs("[data-payment-method-badge]");
+
+    const applySelection = () => {
+      const selected = qs('input[name="payment_method"]:checked');
+      const selectedValue = selected?.value || "cash_on_delivery";
+      const meta = getPaymentMethodMeta(selectedValue);
+      options.forEach((option) => {
+        const input = qs('input[name="payment_method"]', option);
+        option.classList.toggle("is-selected", input?.value === selectedValue);
+      });
+      if (subtitle) subtitle.textContent = meta.description;
+      if (badge) badge.textContent = meta.badge;
+    };
+
+    options.forEach((option) => {
+      const input = qs('input[name="payment_method"]', option);
+      input?.addEventListener("change", applySelection);
+    });
+
+    applySelection();
+  };
+
   const bindCheckoutForm = () => {
     const button = qs("[data-checkout-submit]");
     const status = qs("[data-checkout-status]");
@@ -890,7 +1121,7 @@
         city: String(form.elements.city?.value || "").trim(),
         district: String(form.elements.district?.value || "").trim(),
         address: String(form.elements.address?.value || "").trim(),
-        payment_method: "cash_on_delivery"
+        payment_method: String(form.elements.payment_method?.value || "cash_on_delivery").trim()
       };
       const checkoutItems = state.cart.map((line) => ({
           product_id: Number(line.id),
@@ -960,15 +1191,15 @@
         }
 
         console.info("[checkout] order created", data?.order || null);
-        status.hidden = false;
-        status.dataset.tone = "success";
-        status.textContent = data?.order?.order_number
-          ? `Order submitted successfully. Order number: ${data.order.order_number}`
-          : "Order submitted successfully.";
+        persistSuccessfulOrder(data?.order || null);
         form.reset();
         state.cart = [];
         persistCart();
         refreshCartUi();
+        const orderNumber = String(data?.order?.order_number || "").trim();
+        window.location.href = orderNumber
+          ? `order-success.html?order_number=${encodeURIComponent(orderNumber)}`
+          : "order-success.html";
       } catch (error) {
         status.hidden = false;
         status.dataset.tone = "error";
@@ -1126,7 +1357,13 @@
     loadCart();
     renderCartCount();
     bindContactForm();
+    bindPaymentMethodControls();
     bindCheckoutForm();
+    if (currentPage() === "order-success") {
+      await renderOrderSuccessPage();
+      syncCartFromApi();
+      return;
+    }
     try {
       await fetchProducts();
     } catch (error) {

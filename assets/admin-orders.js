@@ -14,7 +14,11 @@
   const state = {
     orders: [],
     selectedOrder: null,
-    selectedOrderId: null
+    selectedOrderId: null,
+    filters: {
+      status: "",
+      q: ""
+    }
   };
 
   const currentUser = () => {
@@ -85,6 +89,38 @@
       authLink.textContent = isAdmin ? "Account" : "Log in";
       authLink.href = isAdmin ? "account.html" : "login.html";
     }
+  };
+
+  const ordersUrl = () => {
+    const params = new URLSearchParams();
+    if (state.filters.status) params.set("status", state.filters.status);
+    if (state.filters.q) params.set("q", state.filters.q);
+    const query = params.toString();
+    return `${API_BASE}/api/admin/orders${query ? `?${query}` : ""}`;
+  };
+
+  const syncFiltersFromDom = () => {
+    state.filters.status = String(qs("[data-admin-filter-status]")?.value || "").trim().toLowerCase();
+    state.filters.q = String(qs("[data-admin-filter-query]")?.value || "").trim();
+  };
+
+  const bindFilterControls = () => {
+    const form = qs("[data-admin-filter-form]");
+    const resetButton = qs("[data-admin-filter-reset]");
+    if (!form) return;
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      syncFiltersFromDom();
+      void loadOrders();
+    });
+
+    resetButton?.addEventListener("click", () => {
+      form.reset();
+      state.filters.status = "";
+      state.filters.q = "";
+      void loadOrders();
+    });
   };
 
   const renderOrderList = () => {
@@ -201,7 +237,7 @@
 
   const loadOrders = async () => {
     setStatus("Loading orders...");
-    const response = await fetch(`${API_BASE}/api/admin/orders`, {
+    const response = await fetch(ordersUrl(), {
       headers: adminHeaders(),
       cache: "no-store"
     });
@@ -218,7 +254,7 @@
       state.selectedOrder = null;
       state.selectedOrderId = null;
       renderOrderDetail();
-      setStatus("No orders yet.");
+      setStatus("No orders match the current filters.");
       return;
     }
 
@@ -226,7 +262,13 @@
       ? state.selectedOrderId
       : state.orders[0].id;
     await loadOrderDetail(nextOrderId, false);
-    setStatus(`Loaded ${state.orders.length} order${state.orders.length === 1 ? "" : "s"}.`, "success");
+    const filterSummary = [state.filters.status ? `status: ${titleCase(state.filters.status)}` : "", state.filters.q ? `search: "${state.filters.q}"` : ""]
+      .filter(Boolean)
+      .join(" | ");
+    setStatus(
+      `Loaded ${state.orders.length} order${state.orders.length === 1 ? "" : "s"}${filterSummary ? ` (${filterSummary})` : ""}.`,
+      "success"
+    );
   };
 
   const loadOrderDetail = async (orderId, showLoading = true) => {
@@ -272,6 +314,7 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     setAuthUi();
+    bindFilterControls();
     renderOrderList();
     renderOrderDetail();
 
