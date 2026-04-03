@@ -49,6 +49,7 @@
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
+  const selectedColorLabel = (value) => String(value || "").trim() || "Default";
 
   const setStatus = (message, tone = "info") => {
     const status = qs("[data-admin-order-status]");
@@ -131,6 +132,7 @@
                       </div>
                       <div class="mock-admin-order-item__body">
                         <h4>${item.product_name}</h4>
+                        <p>Color: ${selectedColorLabel(item.selected_color)}</p>
                         <p>Quantity: ${item.quantity}</p>
                         <p>${formatMoney(item.unit_price_egp)} each</p>
                       </div>

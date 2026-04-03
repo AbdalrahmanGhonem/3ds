@@ -354,6 +354,11 @@ const ensureIndex = async (tableName, indexName, definitionSql) => {
   await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} ADD ${definitionSql}`);
 };
 
+const dropIndexIfExists = async (tableName, indexName) => {
+  if (!(await indexExists(tableName, indexName))) return;
+  await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} DROP INDEX ${quoteIdentifier(indexName)}`);
+};
+
 const ensureCartSchema = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS carts (
@@ -370,6 +375,32 @@ const ensureCartSchema = async () => {
   const cartColumns = await loadTableColumns("carts");
   await addColumnIfMissing("carts", cartColumns, "guest_token", "guest_token VARCHAR(255) NULL AFTER user_id");
   await pool.query("ALTER TABLE carts MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS cart_items (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      cart_id BIGINT UNSIGNED NOT NULL,
+      product_id BIGINT UNSIGNED NOT NULL,
+      selected_color VARCHAR(120) NOT NULL DEFAULT '',
+      quantity INT UNSIGNED NOT NULL,
+      PRIMARY KEY (id),
+      UNIQUE KEY cart_product_color (cart_id, product_id, selected_color),
+      KEY product_id (product_id),
+      CONSTRAINT cart_items_ibfk_1 FOREIGN KEY (cart_id) REFERENCES carts (id) ON DELETE CASCADE,
+      CONSTRAINT cart_items_ibfk_2 FOREIGN KEY (product_id) REFERENCES products (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  const cartItemColumns = await loadTableColumns("cart_items");
+  await addColumnIfMissing(
+    "cart_items",
+    cartItemColumns,
+    "selected_color",
+    "selected_color VARCHAR(120) NOT NULL DEFAULT '' AFTER product_id"
+  );
+  await pool.query("ALTER TABLE cart_items MODIFY COLUMN selected_color VARCHAR(120) NOT NULL DEFAULT ''");
+  await dropIndexIfExists("cart_items", "cart_product");
+  await ensureIndex("cart_items", "cart_product_color", "UNIQUE INDEX cart_product_color (cart_id, product_id, selected_color)");
 };
 
 const ensureCartSchemaReady = async () => {
@@ -456,8 +487,10 @@ const ensureOrderSchema = async () => {
   await addColumnIfMissing("order_items", itemColumns, "product_name", "product_name VARCHAR(190) NULL AFTER product_id");
   await addColumnIfMissing("order_items", itemColumns, "product_slug", "product_slug VARCHAR(190) NULL AFTER product_name");
   await addColumnIfMissing("order_items", itemColumns, "product_image_url", "product_image_url TEXT NULL AFTER product_slug");
+  await addColumnIfMissing("order_items", itemColumns, "selected_color", "selected_color VARCHAR(120) NOT NULL DEFAULT '' AFTER product_image_url");
   await addColumnIfMissing("order_items", itemColumns, "unit_price_egp", "unit_price_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER unit_price");
   await addColumnIfMissing("order_items", itemColumns, "line_total_egp", "line_total_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER line_total");
+  await pool.query("ALTER TABLE order_items MODIFY COLUMN selected_color VARCHAR(120) NOT NULL DEFAULT ''");
 
   await ensureIndex("order_items", "idx_order_items_order_id", "INDEX idx_order_items_order_id (order_id)");
   await ensureIndex("order_items", "idx_order_items_product_id", "INDEX idx_order_items_product_id (product_id)");
@@ -501,11 +534,13 @@ const validateOrderPayload = (body = {}) => {
   };
 };
 
-const sanitizeCartItems = (items = []) =>
+const sanitizeCartItems = (items = []) => {
+  const merged = new Map();
   (Array.isArray(items) ? items : [])
     .map((item) => ({
       product_id: Number(item?.product_id),
-      quantity: Number(item?.quantity)
+      quantity: Number(item?.quantity),
+      selected_color: String(item?.selected_color || "").trim().replace(/\s+/g, " ").slice(0, 120)
     }))
     .filter(
       (item) =>
@@ -513,7 +548,18 @@ const sanitizeCartItems = (items = []) =>
         item.product_id > 0 &&
         Number.isInteger(item.quantity) &&
         item.quantity > 0
-    );
+    )
+    .forEach((item) => {
+      const key = `${item.product_id}::${String(item.selected_color || "").toLowerCase()}`;
+      const existing = merged.get(key);
+      if (existing) {
+        existing.quantity += item.quantity;
+        return;
+      }
+      merged.set(key, { ...item });
+    });
+  return [...merged.values()];
+};
 
 const mapOrderRecord = (row) => ({
   id: Number(row.id),
@@ -545,6 +591,7 @@ const fetchOrderItemRows = async (orderIds) => {
         product_name,
         product_slug,
         product_image_url,
+        selected_color,
         quantity,
         COALESCE(unit_price_egp, unit_price, 0) AS unit_price_egp,
         COALESCE(line_total_egp, line_total, 0) AS line_total_egp
@@ -565,6 +612,7 @@ const groupOrderItems = (rows = []) => {
       product_name: String(row.product_name || ""),
       product_slug: String(row.product_slug || ""),
       product_image_url: String(row.product_image_url || ""),
+      selected_color: String(row.selected_color || ""),
       quantity: Number(row.quantity) || 0,
       unit_price: normalizeMoney(row.unit_price_egp),
       unit_price_egp: normalizeMoney(row.unit_price_egp),
@@ -648,6 +696,7 @@ const buildOrderItemsFromCart = (cartItems, productMap) => {
       product_name: String(product.name || ""),
       product_slug: String(product.slug || ""),
       product_image_url: String(product.image_url || ""),
+      selected_color: String(item.selected_color || "").trim(),
       unit_price_egp: unitPrice,
       quantity,
       line_total_egp: lineTotal
@@ -917,7 +966,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
     const orderIds = orderRows.map((row) => row.id);
     const placeholders = orderIds.map(() => "?").join(", ");
     const [itemRows] = await pool.query(
-      `SELECT oi.order_id, oi.quantity, oi.unit_price, oi.line_total, p.name, p.image_url
+      `SELECT oi.order_id, oi.quantity, oi.unit_price, oi.line_total, oi.selected_color, p.name, p.image_url
        FROM order_items oi
        INNER JOIN products p ON p.id = oi.product_id
        WHERE oi.order_id IN (${placeholders})
@@ -931,6 +980,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
       items.push({
         name: item.name,
         image_url: item.image_url || "",
+        selected_color: String(item.selected_color || ""),
         quantity: Number(item.quantity) || 0,
         unit_price: Number(item.unit_price) || 0,
         line_total: Number(item.line_total) || 0
@@ -1114,7 +1164,7 @@ const loadCartItemsByIdentifier = async (identifier, executor = pool) => {
   const cartId = await findExistingCartId(identifier, executor);
   if (!cartId) return [];
   const [rows] = await executor.query(
-    "SELECT product_id, quantity FROM cart_items WHERE cart_id = ?",
+    "SELECT product_id, quantity, selected_color FROM cart_items WHERE cart_id = ?",
     [cartId]
   );
   return sanitizeCartItems(rows);
@@ -1139,13 +1189,14 @@ app.get("/api/cart", async (req, res) => {
     const cartId = await findExistingCartId(identifier);
     if (!cartId) return res.json({ items: [] });
     const [rows] = await pool.query(
-      "SELECT product_id, quantity FROM cart_items WHERE cart_id = ?",
+      "SELECT product_id, quantity, selected_color FROM cart_items WHERE cart_id = ?",
       [cartId]
     );
     res.json({
       items: rows.map((row) => ({
         product_id: row.product_id,
-        quantity: row.quantity
+        quantity: row.quantity,
+        selected_color: String(row.selected_color || "")
       }))
     });
   } catch (err) {
@@ -1162,21 +1213,16 @@ app.post("/api/cart", async (req, res) => {
       return res.status(400).json({ error: "Missing cart identity" });
     }
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
-    const cleaned = items
-      .map((item) => ({
-        product_id: Number(item.product_id),
-        quantity: Number(item.quantity)
-      }))
-      .filter((item) => Number.isFinite(item.product_id) && item.product_id > 0 && Number.isFinite(item.quantity) && item.quantity > 0);
+    const cleaned = sanitizeCartItems(items);
 
     const cartId = await getOrCreateCartId(identifier);
     if (!cartId) return res.status(500).json({ error: "Cart not available" });
 
     await pool.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
     if (cleaned.length) {
-      const values = cleaned.map((item) => [cartId, item.product_id, item.quantity]);
+      const values = cleaned.map((item) => [cartId, item.product_id, item.selected_color, item.quantity]);
       await pool.query(
-        "INSERT INTO cart_items (cart_id, product_id, quantity) VALUES ?",
+        "INSERT INTO cart_items (cart_id, product_id, selected_color, quantity) VALUES ?",
         [values]
       );
     }
@@ -1307,6 +1353,7 @@ app.post("/api/orders", async (req, res) => {
       line.product_name,
       line.product_slug,
       line.product_image_url,
+      line.selected_color,
       line.unit_price_egp,
       line.unit_price_egp,
       line.quantity,
@@ -1321,6 +1368,7 @@ app.post("/api/orders", async (req, res) => {
         product_name,
         product_slug,
         product_image_url,
+        selected_color,
         unit_price,
         unit_price_egp,
         quantity,

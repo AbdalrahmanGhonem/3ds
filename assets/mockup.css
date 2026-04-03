@@ -248,8 +248,8 @@ button, input, textarea { font: inherit; }
 }
 .mock-submit-button { margin-top: 32px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 1.25rem; }
 .mock-summary-mini-list { display: grid; gap: 12px; margin-top: 16px; }
-.mock-summary-mini-line { font-size: .875rem; }
-.mock-summary-mini-line span:first-child { max-width: 180px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mock-summary-mini-line { align-items: flex-start; font-size: .875rem; }
+.mock-summary-mini-line span:first-child { max-width: 220px; color: #475569; line-height: 1.45; }
 .mock-summary-mini-line strong { color: var(--mock-text); }
 .mock-simple-content { padding: 24px; }
 .mock-info-grid, .mock-faq-list, .mock-contact-grid { margin-top: 30px; }

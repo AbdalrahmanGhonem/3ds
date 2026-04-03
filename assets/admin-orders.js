@@ -57,6 +57,7 @@
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
+  const selectedColorLabel = (value) => String(value || "").trim() || "Default";
 
   const orderDetailHref = (orderId) => `admin-order.html?id=${encodeURIComponent(orderId)}`;
 
@@ -239,6 +240,7 @@
                       </div>
                       <div class="mock-admin-order-item__body">
                         <h4>${item.product_name}</h4>
+                        <p>Color: ${selectedColorLabel(item.selected_color)}</p>
                         <p>Slug: ${item.product_slug || "-"}</p>
                         <p>${formatMoney(item.unit_price_egp)} x ${item.quantity}</p>
                       </div>

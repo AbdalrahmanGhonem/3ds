@@ -38,6 +38,32 @@
       description: "Stripe is stored as your preferred payment method. No online charge is taken yet."
     }
   };
+  const DEFAULT_SELECTED_COLOR = "Default";
+  const DEFAULT_PRODUCT_SWATCHES = [
+    { name: "Ivory", hex: "#E6E6E1" },
+    { name: "Teal", hex: "#27B494" },
+    { name: "Violet", hex: "#9445BD" },
+    { name: "Blue Gray", hex: "#79A8B7" },
+    { name: "Slate", hex: "#6B747D" },
+    { name: "Mint", hex: "#84D1B5" },
+    { name: "Sand", hex: "#D9C3A0" }
+  ];
+  const PRODUCT_COLOR_HEX_BY_NAME = {
+    gray: "#E6E6E1",
+    grey: "#E6E6E1",
+    white: "#F4F4F1",
+    ivory: "#E6E6E1",
+    teal: "#27B494",
+    violet: "#9445BD",
+    purple: "#9445BD",
+    "blue gray": "#79A8B7",
+    slate: "#6B747D",
+    black: "#2F3740",
+    brown: "#8B6B4A",
+    red: "#C45D5D",
+    mint: "#84D1B5",
+    sand: "#D9C3A0"
+  };
 
   const CART_STORAGE_KEY = "cart";
   const GUEST_CART_KEY = "guest_cart_token";
@@ -83,6 +109,22 @@
 
   const iconMarkup = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || ""}</svg>`;
   const formatMoney = (amount) => `${Number(amount || 0).toLocaleString("en-EG")} EGP`;
+  const normalizeSelectedColor = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  const selectedColorLabel = (value, fallback = DEFAULT_SELECTED_COLOR) => normalizeSelectedColor(value || fallback) || fallback;
+  const selectedColorKey = (value, fallback = DEFAULT_SELECTED_COLOR) => selectedColorLabel(value, fallback).toLowerCase();
+  const colorHexForName = (name, fallback = DEFAULT_PRODUCT_SWATCHES[0].hex) =>
+    PRODUCT_COLOR_HEX_BY_NAME[selectedColorKey(name, "")] || fallback;
+  const buildProductColorOptions = (product) => {
+    const primaryName = selectedColorLabel(product?.color, DEFAULT_PRODUCT_SWATCHES[0].name);
+    const options = [{ name: primaryName, hex: colorHexForName(primaryName) }, ...DEFAULT_PRODUCT_SWATCHES];
+    const seen = new Set();
+    return options.filter((option) => {
+      const key = selectedColorKey(option.name, "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 5);
+  };
   const toBoolean = (value) => value === true || value === 1 || value === "1" || String(value).toLowerCase() === "true";
   const currentPage = () => document.body?.dataset.page || "";
   const formatPaymentMethod = (value) =>
@@ -449,7 +491,11 @@
       state.cart = Array.isArray(saved)
         ? saved
             .filter((line) => line && line.id && Number(line.qty) > 0)
-            .map((line) => ({ id: String(line.id), qty: Number(line.qty) }))
+            .map((line) => ({
+              id: String(line.id),
+              qty: Number(line.qty),
+              selected_color: normalizeSelectedColor(line.selected_color || line.color || "")
+            }))
         : [];
     } catch {
       state.cart = [];
@@ -483,7 +529,11 @@
     cartSaveTimer = setTimeout(async () => {
       try {
         const items = state.cart
-          .map((line) => ({ product_id: Number(line.id), quantity: Number(line.qty) }))
+          .map((line) => ({
+            product_id: Number(line.id),
+            quantity: Number(line.qty),
+            selected_color: cartLineSelectedColor(line)
+          }))
           .filter((item) => item.product_id > 0 && item.quantity > 0);
         await fetch(`${API_BASE}/api/cart`, {
           method: "POST",
@@ -504,7 +554,11 @@
       const items = Array.isArray(data?.items) ? data.items : [];
       if (items.length) {
         state.cart = items
-          .map((item) => ({ id: String(item.product_id), qty: Number(item.quantity) }))
+          .map((item) => ({
+            id: String(item.product_id),
+            qty: Number(item.quantity),
+            selected_color: normalizeSelectedColor(item.selected_color || "")
+          }))
           .filter((item) => item.qty > 0);
         persistCart();
         refreshCartUi();
@@ -516,6 +570,9 @@
 
   const findProduct = (idOrSlug) =>
     state.products.find((product) => product.id === String(idOrSlug) || product.slug === idOrSlug);
+  const cartLineSelectedColor = (line) => selectedColorLabel(line?.selected_color, findProduct(line?.id)?.color || DEFAULT_SELECTED_COLOR);
+  const cartLineKey = (productId, selectedColor = "") => `${String(productId)}::${selectedColorKey(selectedColor, DEFAULT_SELECTED_COLOR)}`;
+  const cartLineKeyFromLine = (line) => cartLineKey(line?.id || line?.product_id, cartLineSelectedColor(line));
 
   const cartCount = () => state.cart.reduce((sum, item) => sum + item.qty, 0);
 
@@ -577,10 +634,13 @@
     }, 700);
   };
 
-  const addToCart = (product, qty = 1, redirect = false, button = null) => {
-    const existing = state.cart.find((item) => item.id === product.id);
+  const addToCart = (product, qty = 1, redirect = false, button = null, selectedColor = "") => {
+    const normalizedSelectedColor = selectedColorLabel(selectedColor, product?.color || DEFAULT_SELECTED_COLOR);
+    const existing = state.cart.find(
+      (item) => cartLineKey(item.id, cartLineSelectedColor(item)) === cartLineKey(product.id, normalizedSelectedColor)
+    );
     if (existing) existing.qty += qty;
-    else state.cart.push({ id: product.id, qty });
+    else state.cart.push({ id: product.id, qty, selected_color: normalizedSelectedColor });
     persistCart();
     scheduleCartSave();
     refreshCartUi();
@@ -588,8 +648,8 @@
     if (redirect) window.location.href = "cart.html";
   };
 
-  const updateCartQuantity = (productId, delta) => {
-    const line = state.cart.find((item) => item.id === String(productId));
+  const updateCartQuantity = (lineKey, delta) => {
+    const line = state.cart.find((item) => cartLineKeyFromLine(item) === String(lineKey));
     if (!line) return;
     line.qty = Math.max(1, line.qty + delta);
     persistCart();
@@ -597,8 +657,8 @@
     refreshCartUi();
   };
 
-  const removeCartItem = (productId) => {
-    state.cart = state.cart.filter((item) => item.id !== String(productId));
+  const removeCartItem = (lineKey) => {
+    state.cart = state.cart.filter((item) => cartLineKeyFromLine(item) !== String(lineKey));
     persistCart();
     scheduleCartSave();
     refreshCartUi();
@@ -717,6 +777,7 @@
 
     const product = findProduct(key) || state.products[0];
     if (!product) return;
+    const productColorOptions = buildProductColorOptions(product);
 
     gridView.hidden = true;
     productView.hidden = false;
@@ -731,11 +792,20 @@
           <h1>${product.name}</h1>
           <p class="mock-product-price">${formatMoney(product.price)}</p>
           <div class="mock-color-row">
-            <button class="mock-color-swatch is-selected" style="background:#E6E6E1" type="button"></button>
-            <button class="mock-color-swatch" style="background:#27B494" type="button"></button>
-            <button class="mock-color-swatch" style="background:#9445BD" type="button"></button>
-            <button class="mock-color-swatch" style="background:#79A8B7" type="button"></button>
-            <button class="mock-color-swatch" style="background:#6B747D" type="button"></button>
+            ${productColorOptions
+              .map(
+                (option, index) => `
+                  <button
+                    class="mock-color-swatch${index === 0 ? " is-selected" : ""}"
+                    style="background:${option.hex}"
+                    type="button"
+                    data-color-name="${option.name}"
+                    aria-label="${option.name}"
+                    title="${option.name}"
+                  ></button>
+                `
+              )
+              .join("")}
           </div>
           <div class="mock-qty-control">
             <button type="button" data-product-qty-change="-1">${iconMarkup("minus")}</button>
@@ -753,10 +823,12 @@
     bindProductImageFallbacks(productWrap);
 
     let qty = 1;
+    let selectedColor = productColorOptions[0]?.name || selectedColorLabel(product.color);
     qsa(".mock-color-swatch", productWrap).forEach((button) => {
       button.addEventListener("click", () => {
         qsa(".mock-color-swatch", productWrap).forEach((node) => node.classList.remove("is-selected"));
         button.classList.add("is-selected");
+        selectedColor = selectedColorLabel(button.dataset.colorName, product.color || DEFAULT_SELECTED_COLOR);
       });
     });
     qsa("[data-product-qty-change]", productWrap).forEach((button) => {
@@ -767,7 +839,7 @@
       });
     });
     qs("[data-buy-product]", productWrap)?.addEventListener("click", (event) => {
-      addToCart(product, qty, true, event.currentTarget);
+      addToCart(product, qty, true, event.currentTarget, selectedColor);
     });
   };
 
@@ -787,20 +859,22 @@
                       .map((line) => {
                         const product = findProduct(line.id);
                         if (!product) return "";
+                        const lineKey = cartLineKeyFromLine(line);
                         return `
                           <div class="mock-cart-item">
                             ${productImageMarkup(product)}
                             <div class="mock-cart-item__body">
                               <h3>${product.name}</h3>
+                              <p>Color: ${cartLineSelectedColor(line)}</p>
                               <p>${formatMoney(product.price)} x ${line.qty}</p>
                               <strong>${formatMoney(product.price * line.qty)}</strong>
                               <div class="mock-cart-actions">
                                 <div class="mock-cart-qty-control">
-                                  <button type="button" data-cart-qty="-1" data-cart-product="${product.id}" aria-label="Decrease quantity">${iconMarkup("minus")}</button>
+                                  <button type="button" data-cart-qty="-1" data-cart-line="${lineKey}" aria-label="Decrease quantity">${iconMarkup("minus")}</button>
                                   <span>${line.qty}</span>
-                                  <button type="button" data-cart-qty="1" data-cart-product="${product.id}" aria-label="Increase quantity">${iconMarkup("plus")}</button>
+                                  <button type="button" data-cart-qty="1" data-cart-line="${lineKey}" aria-label="Increase quantity">${iconMarkup("plus")}</button>
                                 </div>
-                                <button type="button" class="mock-cart-remove" data-cart-remove="${product.id}">Remove</button>
+                                <button type="button" class="mock-cart-remove" data-cart-remove="${lineKey}">Remove</button>
                               </div>
                             </div>
                           </div>
@@ -829,7 +903,7 @@
     bindProductImageFallbacks(wrap);
     qsa("[data-cart-qty]", wrap).forEach((button) => {
       button.addEventListener("click", () => {
-        updateCartQuantity(button.dataset.cartProduct, Number(button.dataset.cartQty || 0));
+        updateCartQuantity(button.dataset.cartLine, Number(button.dataset.cartQty || 0));
       });
     });
     qsa("[data-cart-remove]", wrap).forEach((button) => {
@@ -851,7 +925,7 @@
             .map((line) => {
               const product = findProduct(line.id);
               if (!product) return "";
-              return `<div class="mock-summary-mini-line"><span>${product.name} x ${line.qty}</span><strong>${formatMoney(product.price * line.qty)}</strong></div>`;
+              return `<div class="mock-summary-mini-line"><span>${product.name} (${cartLineSelectedColor(line)}) x ${line.qty}</span><strong>${formatMoney(product.price * line.qty)}</strong></div>`;
             })
             .join("")}
         </div>
@@ -876,7 +950,7 @@
       `Payment Method: ${formatPaymentMethod(order.payment_method)}`,
       "",
       "Items:",
-      ...items.map((item) => `- ${item.product_name} x ${item.quantity} = ${formatMoney(item.line_total_egp)}`),
+      ...items.map((item) => `- ${item.product_name} (${selectedColorLabel(item.selected_color)}) x ${item.quantity} = ${formatMoney(item.line_total_egp)}`),
       "",
       `Subtotal: ${formatMoney(order.subtotal_egp)}`,
       `Shipping: ${Number(order.shipping_egp) === 0 ? "Free" : formatMoney(order.shipping_egp)}`,
@@ -986,6 +1060,7 @@
                       <div class="mock-success-item">
                         <div>
                           <strong>${item.product_name}</strong>
+                          <p>Color: ${selectedColorLabel(item.selected_color)}</p>
                           <p>${formatMoney(item.unit_price_egp)} x ${item.quantity}</p>
                         </div>
                         <strong>${formatMoney(item.line_total_egp)}</strong>
@@ -1115,7 +1190,8 @@
       };
       const checkoutItems = state.cart.map((line) => ({
           product_id: Number(line.id),
-          quantity: Number(line.qty)
+          quantity: Number(line.qty),
+          selected_color: cartLineSelectedColor(line)
         }));
 
       button.disabled = true;
