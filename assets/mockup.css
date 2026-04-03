@@ -115,12 +115,59 @@ button, input, textarea { font: inherit; }
 .mock-color-swatch { cursor: pointer; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .mock-color-swatch:hover { transform: translateY(-1px); }
 .mock-color-swatch.is-selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08); }
-.mock-qty-control { display: inline-flex; align-items: center; margin-top: 16px; overflow: hidden; border: 1px solid var(--mock-border); border-radius: 12px; background: #fff; }
-.mock-qty-control button, .mock-qty-control span { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; min-height: 50px; border: none; background: transparent; }
-.mock-qty-control span { font-size: 1.125rem; font-weight: 700; }
-.mock-qty-control button { cursor: pointer; }
-.mock-qty-control button span { width: 16px; height: 16px; }
-.mock-qty-control button:hover { background: #f8fafc; }
+.mock-qty-control {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+.mock-qty-control button, .mock-qty-control span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+}
+.mock-qty-control span {
+  min-width: 60px;
+  color: var(--mock-text);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+.mock-qty-control button {
+  position: relative;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.mock-qty-control button + span,
+.mock-qty-control span + button {
+  border-left: 1px solid rgba(226, 232, 240, 0.95);
+}
+.mock-qty-control button:hover {
+  background: rgba(231, 243, 246, 0.9);
+}
+.mock-qty-control button:focus-visible {
+  outline: none;
+  background: rgba(231, 243, 246, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(111, 168, 184, 0.35);
+}
+.mock-qty-control svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
 .mock-product-description { margin-top: 22px; }
 .mock-product-description h2, .mock-summary-title { margin: 0; font-size: 1.5rem; font-weight: 900; color: var(--mock-text); }
 .mock-product-description p { margin: 12px 0 0; color: #475569; font-size: 1.125rem; line-height: 1.78; }
@@ -523,8 +570,13 @@ button, input, textarea { font: inherit; }
   }
   .mock-qty-control { margin-top: 14px; }
   .mock-qty-control button, .mock-qty-control span {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 48px;
+    min-height: 46px;
+  }
+  .mock-qty-control span { min-width: 52px; }
+  .mock-qty-control svg {
+    width: 15px;
+    height: 15px;
   }
   .mock-product-description { margin-top: 16px; }
   .mock-product-description h2, .mock-summary-title { font-size: 1.25rem; }
