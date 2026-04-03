@@ -730,11 +730,6 @@
         <div class="mock-product-content">
           <h1>${product.name}</h1>
           <p class="mock-product-price">${formatMoney(product.price)}</p>
-          <div class="mock-detail-list">
-            <p>4.8/5 customer rating</p>
-            <p>Limited stock available</p>
-            <p>Delivery within 2-3 days</p>
-          </div>
           <div class="mock-color-row">
             <button class="mock-color-swatch is-selected" style="background:#E6E6E1" type="button"></button>
             <button class="mock-color-swatch" style="background:#27B494" type="button"></button>
@@ -752,11 +747,6 @@
             <p>${product.description}</p>
           </div>
           <button class="mock-primary-button mock-product-buy" type="button" data-buy-product="${product.slug}">Buy Now - ${formatMoney(product.price)}</button>
-          <div class="mock-product-reassurance">
-            <p>Cash on Delivery Available</p>
-            <p>Easy Returns</p>
-            <p>Trusted by 100+ customers</p>
-          </div>
         </div>
       </article>
     `;

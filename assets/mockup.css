@@ -109,22 +109,22 @@ button, input, textarea { font: inherit; }
 .mock-product-content { padding: 20px; }
 .mock-product-content h1 { margin: 0; font-size: 2.25rem; line-height: 1; letter-spacing: -0.05em; font-weight: 900; }
 .mock-product-price { margin-top: 16px; font-size: 1.875rem; font-weight: 900; }
-.mock-detail-list, .mock-check-list, .mock-product-reassurance { display: grid; gap: 8px; margin-top: 16px; color: #475569; font-size: 1rem; }
-.mock-color-row { display: flex; gap: 12px; margin-top: 24px; }
+.mock-check-list { display: grid; gap: 8px; margin-top: 16px; color: #475569; font-size: 1rem; }
+.mock-color-row { display: flex; gap: 12px; margin-top: 18px; }
 .mock-color-swatch { width: 44px; height: 44px; border-radius: 12px; border: 2px solid #cbd5e1; }
 .mock-color-swatch { cursor: pointer; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .mock-color-swatch:hover { transform: translateY(-1px); }
 .mock-color-swatch.is-selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08); }
-.mock-qty-control { display: inline-flex; align-items: center; margin-top: 20px; overflow: hidden; border: 1px solid var(--mock-border); border-radius: 12px; background: #fff; }
+.mock-qty-control { display: inline-flex; align-items: center; margin-top: 16px; overflow: hidden; border: 1px solid var(--mock-border); border-radius: 12px; background: #fff; }
 .mock-qty-control button, .mock-qty-control span { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; min-height: 50px; border: none; background: transparent; }
 .mock-qty-control span { font-size: 1.125rem; font-weight: 700; }
 .mock-qty-control button { cursor: pointer; }
 .mock-qty-control button span { width: 16px; height: 16px; }
 .mock-qty-control button:hover { background: #f8fafc; }
-.mock-product-description { margin-top: 28px; }
+.mock-product-description { margin-top: 22px; }
 .mock-product-description h2, .mock-summary-title { margin: 0; font-size: 1.5rem; font-weight: 900; color: var(--mock-text); }
 .mock-product-description p { margin: 12px 0 0; color: #475569; font-size: 1.125rem; line-height: 1.78; }
-.mock-product-buy { margin-top: 32px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 1.25rem; font-weight: 700; }
+.mock-product-buy { margin-top: 24px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 1.25rem; font-weight: 700; }
 .mock-two-column-layout { display: grid; gap: 24px; }
 .mock-surface-card__content { padding: 20px; }
 .mock-cart-list { display: grid; gap: 16px; margin-top: 22px; }
@@ -512,26 +512,21 @@ button, input, textarea { font: inherit; }
     margin-top: 10px;
     font-size: 1.5rem;
   }
-  .mock-detail-list, .mock-check-list, .mock-product-reassurance {
-    gap: 6px;
-    margin-top: 12px;
-    font-size: .95rem;
-  }
   .mock-color-row {
     gap: 8px;
-    margin-top: 18px;
+    margin-top: 16px;
   }
   .mock-color-swatch {
     width: 38px;
     height: 38px;
     border-radius: 10px;
   }
-  .mock-qty-control { margin-top: 16px; }
+  .mock-qty-control { margin-top: 14px; }
   .mock-qty-control button, .mock-qty-control span {
     min-width: 44px;
     min-height: 44px;
   }
-  .mock-product-description { margin-top: 20px; }
+  .mock-product-description { margin-top: 16px; }
   .mock-product-description h2, .mock-summary-title { font-size: 1.25rem; }
   .mock-product-description p {
     margin-top: 10px;
@@ -539,7 +534,7 @@ button, input, textarea { font: inherit; }
     line-height: 1.65;
   }
   .mock-product-buy {
-    margin-top: 24px;
+    margin-top: 20px;
     min-height: 50px;
     font-size: 1.05rem;
   }
