@@ -364,11 +364,6 @@ const ensureIndex = async (tableName, indexName, definitionSql) => {
   await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} ADD ${definitionSql}`);
 };
 
-const dropIndexIfExists = async (tableName, indexName) => {
-  if (!(await indexExists(tableName, indexName))) return;
-  await pool.query(`ALTER TABLE ${quoteIdentifier(tableName)} DROP INDEX ${quoteIdentifier(indexName)}`);
-};
-
 const ensureCartSchema = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS carts (
@@ -409,8 +404,6 @@ const ensureCartSchema = async () => {
     "selected_color VARCHAR(120) NOT NULL DEFAULT '' AFTER product_id"
   );
   await pool.query("ALTER TABLE cart_items MODIFY COLUMN selected_color VARCHAR(120) NOT NULL DEFAULT ''");
-  await dropIndexIfExists("cart_items", "cart_product");
-  await ensureIndex("cart_items", "cart_product_color", "UNIQUE INDEX cart_product_color (cart_id, product_id, selected_color)");
 };
 
 const ensureCartSchemaReady = async () => {
@@ -481,7 +474,6 @@ const ensureOrderSchema = async () => {
   await pool.query("ALTER TABLE orders MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
   await pool.query("ALTER TABLE orders MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'pending'");
   await pool.query("ALTER TABLE orders MODIFY COLUMN payment_method VARCHAR(64) NOT NULL DEFAULT 'cash_on_delivery'");
-  await pool.query("ALTER TABLE orders MODIFY COLUMN payment_status VARCHAR(32) NOT NULL DEFAULT 'pending'");
 
   await ensureIndex("orders", "uniq_orders_order_number", "UNIQUE INDEX uniq_orders_order_number (order_number)");
   await ensureIndex("orders", "idx_orders_user_id", "INDEX idx_orders_user_id (user_id)");

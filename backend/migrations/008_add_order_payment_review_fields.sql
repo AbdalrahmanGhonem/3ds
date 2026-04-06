@@ -18,6 +18,3 @@ ALTER TABLE orders
 
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS payment_review_note VARCHAR(255) NULL AFTER payment_rejected_at;
-
-ALTER TABLE orders
-  MODIFY COLUMN payment_status VARCHAR(32) NOT NULL DEFAULT 'pending';
