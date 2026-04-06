@@ -80,6 +80,9 @@ button, input, textarea { font: inherit; }
 .mock-inline-link { display: inline-flex; align-items: center; gap: 4px; font-size: .875rem; font-weight: 700; color: #334155; }
 .mock-inline-link span { display: inline-flex; width: 16px; height: 16px; }
 .mock-pill-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 999px; background: var(--mock-accent-soft); padding: 8px 16px; color: var(--mock-text); font-size: .875rem; font-weight: 700; white-space: nowrap; }
+.mock-pill-badge[data-tone="success"] { background: #dcfce7; color: #166534; }
+.mock-pill-badge[data-tone="warning"] { background: #fef3c7; color: #92400e; }
+.mock-pill-badge[data-tone="error"] { background: #fee2e2; color: #991b1b; }
 .mock-product-grid { display: grid; gap: 20px; align-items: stretch; }
 .mock-product-card { overflow: hidden; border: 1px solid var(--mock-border); border-radius: 24px; background: var(--mock-surface); box-shadow: var(--mock-shadow); }
 .mock-product-card { display: flex; flex-direction: column; min-height: 100%; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
@@ -251,6 +254,80 @@ button, input, textarea { font: inherit; }
 .mock-summary-mini-line { align-items: flex-start; font-size: .875rem; }
 .mock-summary-mini-line span:first-child { max-width: 220px; color: #475569; line-height: 1.45; }
 .mock-summary-mini-line strong { color: var(--mock-text); }
+.mock-payment-proof-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--mock-border);
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+.mock-payment-proof-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mock-payment-proof-panel__eyebrow {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: .85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.mock-payment-proof-destination {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #dbe4ef;
+}
+.mock-payment-proof-destination span {
+  color: #64748b;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.mock-payment-proof-destination strong {
+  color: var(--mock-text);
+  font-size: 1.1rem;
+  word-break: break-word;
+}
+.mock-payment-proof-copy {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+}
+.mock-payment-proof-summary {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--mock-border);
+}
+.mock-payment-proof-summary h3,
+.mock-payment-proof-summary p {
+  margin: 0;
+}
+.mock-payment-proof-summary h3 {
+  color: var(--mock-text);
+  font-size: 1rem;
+}
+.mock-payment-proof-summary p {
+  color: #475569;
+  font-size: .95rem;
+}
+.mock-payment-proof-form {
+  display: grid;
+  gap: 14px;
+}
+.mock-payment-proof-fields {
+  display: grid;
+  gap: 12px;
+}
 .mock-simple-content { padding: 24px; }
 .mock-info-grid, .mock-faq-list, .mock-contact-grid { margin-top: 30px; }
 .mock-info-card { padding: 20px; }
@@ -266,6 +343,7 @@ button, input, textarea { font: inherit; }
 .mock-contact-item span:first-child { width: 20px; height: 20px; }
 .mock-form-status { margin: 0; color: #334155; font-size: .95rem; font-weight: 700; }
 .mock-form-status[data-tone="success"] { color: #166534; }
+.mock-form-status[data-tone="warning"] { color: #92400e; }
 .mock-form-status[data-tone="error"] { color: #991b1b; }
 .mock-footer { margin-top: 32px; border-top: 1px solid var(--mock-border); background: #fff; }
 .mock-footer__grid { display: grid; gap: 32px; padding: 38px 16px 40px; }
@@ -923,6 +1001,38 @@ button, input, textarea { font: inherit; }
   gap: 12px;
   flex-wrap: wrap;
 }
+.mock-admin-payment-review {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--mock-border);
+  border-radius: 20px;
+  background: #f8fafc;
+}
+.mock-admin-payment-review__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mock-admin-payment-review__top h3,
+.mock-admin-payment-review__top p {
+  margin: 0;
+}
+.mock-admin-payment-review__top h3 {
+  color: var(--mock-text);
+  font-size: 1.05rem;
+}
+.mock-admin-payment-review__top p {
+  color: #64748b;
+  margin-top: 6px;
+  font-size: .92rem;
+}
+.mock-admin-payment-review__actions {
+  display: grid;
+  gap: 12px;
+}
 .mock-admin-order-items {
   display: grid;
   gap: 12px;
@@ -1171,5 +1281,9 @@ button, input, textarea { font: inherit; }
   }
   .mock-success-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mock-payment-proof-fields,
+  .mock-admin-payment-review__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

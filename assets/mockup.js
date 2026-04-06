@@ -30,7 +30,7 @@
     instapay: {
       label: "Instapay",
       badge: "Manual",
-      description: "Your order is saved and the payment step is confirmed manually after placement."
+      description: "Your order is created first. Transfer the exact amount, then submit your transfer details for manual review."
     },
     stripe: {
       label: "Stripe",
@@ -38,6 +38,16 @@
       description: "Stripe is stored as your preferred payment method. No online charge is taken yet."
     }
   };
+  const PAYMENT_STATUS_META = {
+    pending: { label: "Pending", tone: "neutral" },
+    pending_confirmation: { label: "Pending Confirmation", tone: "warning" },
+    awaiting_review: { label: "Awaiting Review", tone: "warning" },
+    confirmed: { label: "Confirmed", tone: "success" },
+    rejected: { label: "Rejected", tone: "error" }
+  };
+  const INSTAPAY_DESTINATION_LABEL = String(window.__INSTAPAY_DESTINATION_LABEL || "InstaPay ID").trim() || "InstaPay ID";
+  const INSTAPAY_DESTINATION_VALUE = String(window.__INSTAPAY_DESTINATION_VALUE || "your@instapay").trim() || "your@instapay";
+  const INSTAPAY_OPEN_URL = String(window.__INSTAPAY_OPEN_URL || "").trim();
   const DEFAULT_SELECTED_COLOR = "Default";
   const DEFAULT_PRODUCT_SWATCHES = [
     { name: "Ivory", hex: "#E6E6E1" },
@@ -109,6 +119,8 @@
 
   const iconMarkup = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || ""}</svg>`;
   const formatMoney = (amount) => `${Number(amount || 0).toLocaleString("en-EG")} EGP`;
+  const escapeHtml = (value) =>
+    String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const normalizeSelectedColor = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
   const selectedColorLabel = (value, fallback = DEFAULT_SELECTED_COLOR) => normalizeSelectedColor(value || fallback) || fallback;
   const selectedColorKey = (value, fallback = DEFAULT_SELECTED_COLOR) => selectedColorLabel(value, fallback).toLowerCase();
@@ -136,6 +148,14 @@
       .join(" ");
   const getPaymentMethodMeta = (value) =>
     PAYMENT_METHODS[String(value || "").trim().toLowerCase()] || PAYMENT_METHODS.cash_on_delivery;
+  const getPaymentStatusMeta = (value) =>
+    PAYMENT_STATUS_META[String(value || "").trim().toLowerCase()] || PAYMENT_STATUS_META.pending;
+  const formatPaymentStatus = (value) => getPaymentStatusMeta(value).label;
+  const paymentStatusTone = (value) => getPaymentStatusMeta(value).tone;
+  const isInstapayOrder = (order) => String(order?.payment_method || "").trim().toLowerCase() === "instapay";
+  const isInstapayPaymentConfirmed = (order) => String(order?.payment_status || "").trim().toLowerCase() === "confirmed";
+  const canSubmitInstapayTransfer = (order) =>
+    isInstapayOrder(order) && ["pending", "pending_confirmation", "rejected"].includes(String(order?.payment_status || "").trim().toLowerCase());
   const featuredProducts = () => state.products.filter((product) => product.featured === true);
   const isExternalImageUrl = (value) => /^(?:[a-z]+:)?\/\//i.test(String(value || "").trim());
   const isDirectImageSource = (value) => /^(?:data:|blob:)/i.test(String(value || "").trim());
@@ -948,6 +968,7 @@
       `Phone: ${order.phone || "-"}`,
       `Address: ${[order.address, order.district, order.governorate].filter(Boolean).join(", ") || "-"}`,
       `Payment Method: ${formatPaymentMethod(order.payment_method)}`,
+      `Payment Status: ${formatPaymentStatus(order.payment_status)}`,
       "",
       "Items:",
       ...items.map((item) => `- ${item.product_name} (${selectedColorLabel(item.selected_color)}) x ${item.quantity} = ${formatMoney(item.line_total_egp)}`),
@@ -966,27 +987,106 @@
     return `https://wa.me/${ORDER_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   };
 
+  const copyText = async (value) => {
+    const text = String(value || "").trim();
+    if (!text) return false;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const didCopy = document.execCommand("copy");
+    textarea.remove();
+    return didCopy;
+  };
+
   const loadOrderForSuccessPage = async () => {
     const params = new URLSearchParams(window.location.search);
     const orderNumber = String(params.get("order_number") || "").trim();
     const savedOrder = readSuccessfulOrder();
 
-    if (savedOrder && (!orderNumber || savedOrder.order_number === orderNumber)) {
+    if (savedOrder && !orderNumber) {
       return savedOrder;
     }
 
     if (!orderNumber) return null;
 
-    const response = await fetch(`${API_BASE}/api/orders/number/${encodeURIComponent(orderNumber)}`, {
-      headers: cartHeaders(),
-      cache: "no-store"
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data?.error || "Could not load your order details.");
+    try {
+      const response = await fetch(`${API_BASE}/api/orders/number/${encodeURIComponent(orderNumber)}`, {
+        headers: cartHeaders(),
+        cache: "no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not load your order details.");
+      }
+      if (data?.order) persistSuccessfulOrder(data.order);
+      return data?.order || null;
+    } catch (error) {
+      if (savedOrder && savedOrder.order_number === orderNumber) {
+        return savedOrder;
+      }
+      throw error;
     }
-    if (data?.order) persistSuccessfulOrder(data.order);
-    return data?.order || null;
+  };
+
+  const submitInstapayTransfer = async (order, form, statusNode) => {
+    const submitButton = qs("[data-submit-instapay]", form);
+    const setStatus = (message, tone = "info") => {
+      if (!statusNode) return;
+      statusNode.hidden = !message;
+      statusNode.textContent = message || "";
+      if (message) statusNode.dataset.tone = tone;
+      else delete statusNode.dataset.tone;
+    };
+
+    const paymentReference = String(form.elements.payment_reference?.value || "").trim();
+    const payerMobile = String(form.elements.payer_mobile?.value || "").trim();
+    if (!paymentReference && !payerMobile) {
+      setStatus("Enter a transfer reference or the sender mobile number.", "error");
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting...";
+    }
+    setStatus("Submitting your transfer details...");
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/orders/number/${encodeURIComponent(order.order_number || order.id || "")}/payment-submission`,
+        {
+          method: "POST",
+          headers: cartHeaders(),
+          body: JSON.stringify({
+            payment_reference: paymentReference,
+            payer_mobile: payerMobile
+          })
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not submit your transfer details.");
+      }
+
+      if (data?.order) persistSuccessfulOrder(data.order);
+      await renderOrderSuccessPage();
+    } catch (error) {
+      setStatus(error.message || "Could not submit your transfer details.", "error");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "I Have Transferred";
+      }
+    }
   };
 
   const renderOrderSuccessPage = async () => {
@@ -1020,14 +1120,112 @@
 
       const paymentMeta = getPaymentMethodMeta(order.payment_method);
       const whatsappUrl = createWhatsAppUrl(order);
+      const paymentStatus = String(order.payment_status || "").trim().toLowerCase() || "pending";
+      const instapayOrder = isInstapayOrder(order);
+      const paymentConfirmed = isInstapayPaymentConfirmed(order);
+      const heroKicker = instapayOrder
+        ? paymentConfirmed
+          ? "Payment confirmed"
+          : paymentStatus === "awaiting_review"
+            ? "Transfer submitted"
+            : paymentStatus === "rejected"
+              ? "Transfer needs review"
+              : "Complete your InstaPay transfer"
+        : "Order placed successfully";
+      const heroTitle = instapayOrder
+        ? paymentConfirmed
+          ? `Payment received for ${order.customer_name || "your order"}.`
+          : `Complete payment for order ${order.order_number || order.id || "-"}.`
+        : `Thanks, ${order.customer_name || "there"}.`;
+      const heroCopy = instapayOrder
+        ? paymentConfirmed
+          ? "Your InstaPay payment has been manually confirmed. Your order is now confirmed in the system."
+          : paymentStatus === "awaiting_review"
+            ? "Your transfer details were submitted successfully. We will review the transfer before confirming payment."
+            : paymentStatus === "rejected"
+              ? "Your last transfer submission was not confirmed yet. Review the note below, then submit updated transfer details."
+              : "Transfer the exact order total to the InstaPay destination below, then submit your transfer details for manual review."
+        : "Your order is saved in the system. Keep the order number below in case you need support or want to follow up on WhatsApp.";
+      const submittedReference = escapeHtml(order.payment_reference || "");
+      const submittedPayerMobile = escapeHtml(order.payer_mobile || "");
+      const reviewNote = escapeHtml(order.payment_review_note || "");
+      const submittedAt = order.payment_submitted_at ? new Date(order.payment_submitted_at).toLocaleString("en-GB") : "";
+      const openInstapayLabel = INSTAPAY_OPEN_URL ? "Open InstaPay" : "Open InstaPay";
+
+      const instapayPanelMarkup = instapayOrder
+        ? `
+            <div class="mock-payment-proof-panel">
+              <div class="mock-payment-proof-panel__header">
+                <div>
+                  <p class="mock-payment-proof-panel__eyebrow">InstaPay Instructions</p>
+                  <h2 class="mock-summary-title">Transfer ${formatMoney(order.total_egp)}</h2>
+                </div>
+                <span class="mock-pill-badge" data-tone="${paymentStatusTone(order.payment_status)}">${formatPaymentStatus(order.payment_status)}</span>
+              </div>
+              <div class="mock-payment-proof-destination">
+                <span>${escapeHtml(INSTAPAY_DESTINATION_LABEL)}</span>
+                <strong>${escapeHtml(INSTAPAY_DESTINATION_VALUE)}</strong>
+              </div>
+              <p class="mock-payment-proof-copy">
+                Transfer the exact amount, then return here and confirm you transferred. Payment is reviewed manually before it is confirmed.
+              </p>
+              <div class="mock-success-actions">
+                <button class="mock-primary-button" type="button" data-instapay-open>${openInstapayLabel}</button>
+                <button class="mock-secondary-button" type="button" data-copy-instapay>Copy Payment Info</button>
+              </div>
+              <p class="mock-form-status" data-instapay-inline-status hidden></p>
+              ${
+                order.payment_reference || order.payer_mobile || order.payment_submitted_at
+                  ? `
+                    <div class="mock-payment-proof-summary">
+                      <h3>Submitted Transfer Details</h3>
+                      ${submittedReference ? `<p><strong>Reference:</strong> ${submittedReference}</p>` : ""}
+                      ${submittedPayerMobile ? `<p><strong>Payer Mobile:</strong> ${submittedPayerMobile}</p>` : ""}
+                      ${submittedAt ? `<p><strong>Submitted:</strong> ${escapeHtml(submittedAt)}</p>` : ""}
+                      ${reviewNote ? `<p><strong>Review Note:</strong> ${reviewNote}</p>` : ""}
+                    </div>
+                  `
+                  : ""
+              }
+              ${
+                canSubmitInstapayTransfer(order)
+                  ? `
+                    <form class="mock-payment-proof-form" data-instapay-form>
+                      <div class="mock-payment-proof-fields">
+                        <input
+                          class="mock-input"
+                          type="text"
+                          name="payment_reference"
+                          maxlength="120"
+                          placeholder="Transfer reference or last 4 digits"
+                          value="${submittedReference}"
+                        >
+                        <input
+                          class="mock-input"
+                          type="text"
+                          name="payer_mobile"
+                          maxlength="32"
+                          placeholder="Sender mobile number"
+                          value="${submittedPayerMobile}"
+                        >
+                      </div>
+                      <button class="mock-primary-button" type="submit" data-submit-instapay>I Have Transferred</button>
+                      <p class="mock-form-status" data-instapay-status hidden></p>
+                    </form>
+                  `
+                  : ""
+              }
+            </div>
+          `
+        : "";
       wrap.innerHTML = `
         <div class="mock-success-layout">
           <article class="mock-surface-card">
             <div class="mock-surface-card__content mock-simple-content mock-success-card">
               <div class="mock-success-hero">
-                <p class="mock-success-kicker">Order placed successfully</p>
-                <h1 class="mock-page-title">Thanks, ${order.customer_name || "there"}.</h1>
-                <p class="mock-success-copy">Your order is saved in the system. Keep the order number below in case you need support or want to follow up on WhatsApp.</p>
+                <p class="mock-success-kicker">${heroKicker}</p>
+                <h1 class="mock-page-title">${heroTitle}</h1>
+                <p class="mock-success-copy">${heroCopy}</p>
               </div>
               <div class="mock-success-grid">
                 <div class="mock-success-stat">
@@ -1042,8 +1240,13 @@
                   <span>Payment Method</span>
                   <strong>${formatPaymentMethod(order.payment_method)}</strong>
                 </div>
+                <div class="mock-success-stat">
+                  <span>Payment Status</span>
+                  <strong>${formatPaymentStatus(order.payment_status)}</strong>
+                </div>
               </div>
               <p class="mock-success-note">${paymentMeta.description}</p>
+              ${instapayPanelMarkup}
               <div class="mock-success-actions">
                 <a href="shop.html" class="mock-primary-button">Back to Shop</a>
                 ${whatsappUrl ? `<a href="${whatsappUrl}" class="mock-secondary-button" target="_blank" rel="noreferrer">Send on WhatsApp</a>` : ""}
@@ -1078,6 +1281,43 @@
           </article>
         </div>
       `;
+
+      const inlineStatus = qs("[data-instapay-inline-status]", wrap);
+      const setInlineStatus = (message, tone = "info") => {
+        if (!inlineStatus) return;
+        inlineStatus.hidden = !message;
+        inlineStatus.textContent = message || "";
+        if (message) inlineStatus.dataset.tone = tone;
+        else delete inlineStatus.dataset.tone;
+      };
+
+      qs("[data-instapay-open]", wrap)?.addEventListener("click", async () => {
+        if (INSTAPAY_OPEN_URL) {
+          window.open(INSTAPAY_OPEN_URL, "_blank", "noopener,noreferrer");
+          return;
+        }
+
+        try {
+          await copyText(INSTAPAY_DESTINATION_VALUE);
+          setInlineStatus("No direct InstaPay link is configured yet. The payment info was copied instead.", "success");
+        } catch {
+          setInlineStatus("No direct InstaPay link is configured yet. Copy the payment info manually.", "error");
+        }
+      });
+
+      qs("[data-copy-instapay]", wrap)?.addEventListener("click", async () => {
+        try {
+          await copyText(INSTAPAY_DESTINATION_VALUE);
+          setInlineStatus("Payment info copied.", "success");
+        } catch {
+          setInlineStatus("Could not copy the payment info on this device.", "error");
+        }
+      });
+
+      qs("[data-instapay-form]", wrap)?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await submitInstapayTransfer(order, event.currentTarget, qs("[data-instapay-status]", event.currentTarget));
+      });
     } catch (error) {
       wrap.innerHTML = `
         <article class="mock-surface-card">

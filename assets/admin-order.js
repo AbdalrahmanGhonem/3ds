@@ -50,6 +50,21 @@
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   const selectedColorLabel = (value) => String(value || "").trim() || "Default";
+  const formatPaymentStatus = (value) =>
+    ({
+      pending: "Pending",
+      pending_confirmation: "Pending Confirmation",
+      awaiting_review: "Awaiting Review",
+      confirmed: "Confirmed",
+      rejected: "Rejected"
+    }[String(value || "").trim().toLowerCase()] || titleCase(value || "pending"));
+  const paymentTone = (value) =>
+    ({
+      confirmed: "success",
+      rejected: "error",
+      pending_confirmation: "warning",
+      awaiting_review: "warning"
+    }[String(value || "").trim().toLowerCase()] || "neutral");
 
   const setStatus = (message, tone = "info") => {
     const status = qs("[data-admin-order-status]");
@@ -99,6 +114,7 @@
             <p><strong>Governorate:</strong> ${order.governorate || "-"}</p>
             <p><strong>District:</strong> ${order.district || "-"}</p>
             <p><strong>Payment:</strong> ${titleCase(order.payment_method)}</p>
+            <p><strong>Payment Status:</strong> ${formatPaymentStatus(order.payment_status)}</p>
             <p><strong>Status:</strong> ${titleCase(order.status)}</p>
             <p><strong>Subtotal:</strong> ${formatMoney(order.subtotal_egp)}</p>
             <p><strong>Shipping:</strong> ${Number(order.shipping_egp) === 0 ? "Free" : formatMoney(order.shipping_egp)}</p>
@@ -119,6 +135,36 @@
             </select>
           </label>
           <button class="mock-primary-button" type="button" data-save-order-status>Update Status</button>
+        </div>
+
+        <div class="mock-admin-payment-review">
+          <div class="mock-admin-payment-review__top">
+            <div>
+              <h3>Payment Review</h3>
+              <p>Manual review state for the selected payment method.</p>
+            </div>
+            <span class="mock-pill-badge" data-tone="${paymentTone(order.payment_status)}">${formatPaymentStatus(order.payment_status)}</span>
+          </div>
+          <div class="mock-admin-order-summary__grid">
+            <p><strong>Method:</strong> ${titleCase(order.payment_method)}</p>
+            <p><strong>Reference:</strong> ${order.payment_reference || "-"}</p>
+            <p><strong>Payer Mobile:</strong> ${order.payer_mobile || "-"}</p>
+            <p><strong>Submitted:</strong> ${order.payment_submitted_at ? formatDate(order.payment_submitted_at) : "-"}</p>
+            <p><strong>Confirmed:</strong> ${order.payment_confirmed_at ? formatDate(order.payment_confirmed_at) : "-"}</p>
+            <p><strong>Rejected:</strong> ${order.payment_rejected_at ? formatDate(order.payment_rejected_at) : "-"}</p>
+            <p class="mock-admin-order-summary__address"><strong>Review Note:</strong> ${order.payment_review_note || "-"}</p>
+          </div>
+          ${
+            String(order.payment_method || "").trim().toLowerCase() === "instapay"
+              ? `
+                <div class="mock-admin-payment-review__actions">
+                  <input class="mock-input" type="text" maxlength="255" placeholder="Optional rejection note" data-payment-review-note>
+                  <button class="mock-primary-button" type="button" data-payment-action="confirm">Confirm Payment</button>
+                  <button class="mock-secondary-button" type="button" data-payment-action="reject">Reject Payment</button>
+                </div>
+              `
+              : ""
+          }
         </div>
 
         <div class="mock-admin-order-items">
@@ -149,6 +195,12 @@
     qs("[data-save-order-status]", wrap)?.addEventListener("click", () => {
       const nextStatus = qs("[data-order-status]", wrap)?.value || order.status;
       void updateOrderStatus(order.id, nextStatus);
+    });
+    qsa("[data-payment-action]", wrap).forEach((button) => {
+      button.addEventListener("click", () => {
+        const note = qs("[data-payment-review-note]", wrap)?.value || "";
+        void updateOrderPayment(order.id, button.dataset.paymentAction, note);
+      });
     });
   };
 
@@ -193,6 +245,24 @@
     state.order = data?.order || state.order;
     renderOrderDetail();
     setStatus("Order status updated.", "success");
+  };
+
+  const updateOrderPayment = async (orderId, action, note = "") => {
+    setStatus(action === "confirm" ? "Confirming payment..." : "Rejecting payment...");
+    const response = await fetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/payment`, {
+      method: "PATCH",
+      headers: adminHeaders(),
+      body: JSON.stringify({ action, note })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || "Could not update the payment status.");
+    }
+
+    state.order = data?.order || state.order;
+    renderOrderDetail();
+    setStatus(action === "confirm" ? "Payment confirmed." : "Payment rejected.", "success");
   };
 
   document.addEventListener("DOMContentLoaded", async () => {

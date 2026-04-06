@@ -291,6 +291,14 @@ const loadAuthenticatedUser = async (userId, isAdmin) => {
 const ORDER_STATUS_VALUES = new Set(["pending", "confirmed", "shipped", "delivered", "cancelled"]);
 const ORDER_DEFAULT_PAYMENT_METHOD = "cash_on_delivery";
 const ORDER_PAYMENT_METHOD_VALUES = new Set(["cash_on_delivery", "vodafone_cash", "instapay", "stripe"]);
+const ORDER_DEFAULT_PAYMENT_STATUS = "pending";
+const ORDER_PAYMENT_STATUS_VALUES = new Set([
+  "pending",
+  "pending_confirmation",
+  "awaiting_review",
+  "confirmed",
+  "rejected"
+]);
 const ORDER_SHIPPING_THRESHOLD_EGP = 500;
 const ORDER_SHIPPING_FEE_EGP = 60;
 
@@ -305,6 +313,8 @@ const createHttpError = (status, message) => {
 
 const normalizeMoney = (value) => Number(Number(value || 0).toFixed(2));
 const normalizePhone = (value) => String(value || "").trim().replace(/\s+/g, " ");
+const normalizePaymentReference = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
+const normalizePaymentReviewNote = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 255);
 const calculateShippingEgp = (subtotal) =>
   subtotal >= ORDER_SHIPPING_THRESHOLD_EGP || subtotal === 0 ? 0 : ORDER_SHIPPING_FEE_EGP;
 const createOrderNumber = () =>
@@ -449,16 +459,29 @@ const ensureOrderSchema = async () => {
   await addColumnIfMissing("orders", orderColumns, "governorate", "governorate VARCHAR(120) NULL AFTER phone");
   await addColumnIfMissing("orders", orderColumns, "district", "district VARCHAR(120) NULL AFTER governorate");
   await addColumnIfMissing("orders", orderColumns, "address", "address TEXT NULL AFTER district");
+  await addColumnIfMissing(
+    "orders",
+    orderColumns,
+    "payment_status",
+    "payment_status VARCHAR(32) NOT NULL DEFAULT 'pending' AFTER payment_method"
+  );
   await addColumnIfMissing("orders", orderColumns, "subtotal_egp", "subtotal_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER payment_method");
   await addColumnIfMissing("orders", orderColumns, "shipping_egp", "shipping_egp DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER subtotal_egp");
   await addColumnIfMissing("orders", orderColumns, "guest_token", "guest_token VARCHAR(190) NULL AFTER user_id");
   await addColumnIfMissing("orders", orderColumns, "shipping_name", "shipping_name VARCHAR(190) NULL AFTER guest_token");
   await addColumnIfMissing("orders", orderColumns, "shipping_phone", "shipping_phone VARCHAR(32) NULL AFTER shipping_name");
   await addColumnIfMissing("orders", orderColumns, "shipping_addr", "shipping_addr TEXT NULL AFTER shipping_phone");
+  await addColumnIfMissing("orders", orderColumns, "payment_reference", "payment_reference VARCHAR(120) NULL AFTER shipping_addr");
+  await addColumnIfMissing("orders", orderColumns, "payer_mobile", "payer_mobile VARCHAR(32) NULL AFTER payment_reference");
+  await addColumnIfMissing("orders", orderColumns, "payment_submitted_at", "payment_submitted_at DATETIME NULL AFTER payer_mobile");
+  await addColumnIfMissing("orders", orderColumns, "payment_confirmed_at", "payment_confirmed_at DATETIME NULL AFTER payment_submitted_at");
+  await addColumnIfMissing("orders", orderColumns, "payment_rejected_at", "payment_rejected_at DATETIME NULL AFTER payment_confirmed_at");
+  await addColumnIfMissing("orders", orderColumns, "payment_review_note", "payment_review_note VARCHAR(255) NULL AFTER payment_rejected_at");
 
   await pool.query("ALTER TABLE orders MODIFY COLUMN user_id BIGINT UNSIGNED NULL");
   await pool.query("ALTER TABLE orders MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'pending'");
   await pool.query("ALTER TABLE orders MODIFY COLUMN payment_method VARCHAR(64) NOT NULL DEFAULT 'cash_on_delivery'");
+  await pool.query("ALTER TABLE orders MODIFY COLUMN payment_status VARCHAR(32) NOT NULL DEFAULT 'pending'");
 
   await ensureIndex("orders", "uniq_orders_order_number", "UNIQUE INDEX uniq_orders_order_number (order_number)");
   await ensureIndex("orders", "idx_orders_user_id", "INDEX idx_orders_user_id (user_id)");
@@ -570,6 +593,13 @@ const mapOrderRecord = (row) => ({
   district: String(row.district || ""),
   address: String(row.address || row.shipping_addr || ""),
   payment_method: String(row.payment_method || ORDER_DEFAULT_PAYMENT_METHOD),
+  payment_status: String(row.payment_status || ORDER_DEFAULT_PAYMENT_STATUS),
+  payment_reference: String(row.payment_reference || ""),
+  payer_mobile: String(row.payer_mobile || ""),
+  payment_review_note: String(row.payment_review_note || ""),
+  payment_submitted_at: row.payment_submitted_at || null,
+  payment_confirmed_at: row.payment_confirmed_at || null,
+  payment_rejected_at: row.payment_rejected_at || null,
   subtotal_egp: normalizeMoney(row.subtotal_egp),
   shipping_egp: normalizeMoney(row.shipping_egp),
   total_egp: normalizeMoney(row.total_egp),
@@ -636,6 +666,13 @@ const loadOrderDetail = async (whereClause, params = []) => {
         district,
         address,
         payment_method,
+        payment_status,
+        payment_reference,
+        payer_mobile,
+        payment_submitted_at,
+        payment_confirmed_at,
+        payment_rejected_at,
+        payment_review_note,
         subtotal_egp,
         shipping_egp,
         total_egp,
@@ -656,6 +693,26 @@ const loadOrderDetail = async (whereClause, params = []) => {
   const itemRows = await fetchOrderItemRows([order.id]);
   const itemsByOrder = groupOrderItems(itemRows);
   return { ...order, items: itemsByOrder.get(order.id) || [] };
+};
+
+const loadOrderForRequester = async (orderNumber, req) => {
+  const normalizedOrderNumber = String(orderNumber || "").trim();
+  if (!normalizedOrderNumber) return null;
+
+  let order = null;
+  const numericUserId = Number(req.headers?.user_id);
+  if (Number.isFinite(numericUserId) && numericUserId > 0) {
+    order = await loadOrderDetail("WHERE order_number = ? AND user_id = ?", [normalizedOrderNumber, numericUserId]);
+  }
+
+  if (!order) {
+    const identifier = cartIdentifier(req);
+    if (identifier.type === "guest") {
+      order = await loadOrderDetail("WHERE order_number = ? AND guest_token = ?", [normalizedOrderNumber, identifier.value]);
+    }
+  }
+
+  return order;
 };
 
 const loadCheckoutProducts = async (productIds, executor = pool) => {
@@ -955,7 +1012,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
     }
 
     const [orderRows] = await pool.query(
-      "SELECT id, order_number, status, total_egp, payment_method, shipping_name, shipping_phone, shipping_addr, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT id, order_number, status, total_egp, payment_method, payment_status, shipping_name, shipping_phone, shipping_addr, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC",
       [numericUserId]
     );
 
@@ -994,6 +1051,7 @@ app.get("/api/account", requireAuthenticated, async (req, res) => {
       status: order.status,
       total_egp: Number(order.total_egp) || 0,
       payment_method: order.payment_method,
+      payment_status: String(order.payment_status || ORDER_DEFAULT_PAYMENT_STATUS),
       shipping_name: order.shipping_name || "",
       shipping_phone: order.shipping_phone || "",
       shipping_addr: order.shipping_addr || "",
@@ -1287,6 +1345,7 @@ app.post("/api/orders", async (req, res) => {
 
     let orderId = null;
     let orderNumber = "";
+    const paymentStatus = orderPayload.paymentMethod === "instapay" ? "pending_confirmation" : ORDER_DEFAULT_PAYMENT_STATUS;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         orderNumber = createOrderNumber();
@@ -1299,6 +1358,7 @@ app.post("/api/orders", async (req, res) => {
             district,
             address,
             payment_method,
+            payment_status,
             subtotal_egp,
             shipping_egp,
             total_egp,
@@ -1319,6 +1379,7 @@ app.post("/api/orders", async (req, res) => {
             orderPayload.district,
             orderPayload.address,
             orderPayload.paymentMethod,
+            paymentStatus,
             subtotal,
             shipping,
             total,
@@ -1407,6 +1468,7 @@ app.post("/api/orders", async (req, res) => {
         district: orderPayload.district,
         address: orderPayload.address,
         payment_method: orderPayload.paymentMethod,
+        payment_status: paymentStatus,
         subtotal_egp: subtotal,
         shipping_egp: shipping,
         total_egp: total,
@@ -1436,18 +1498,7 @@ app.get("/api/orders/number/:orderNumber", async (req, res) => {
       return res.status(400).json({ error: "Order number is required." });
     }
 
-    let order = null;
-    const numericUserId = Number(req.headers?.user_id);
-    if (Number.isFinite(numericUserId) && numericUserId > 0) {
-      order = await loadOrderDetail("WHERE order_number = ? AND user_id = ?", [orderNumber, numericUserId]);
-    }
-
-    if (!order) {
-      const identifier = cartIdentifier(req);
-      if (identifier.type === "guest") {
-        order = await loadOrderDetail("WHERE order_number = ? AND guest_token = ?", [orderNumber, identifier.value]);
-      }
-    }
+    const order = await loadOrderForRequester(orderNumber, req);
 
     if (!order) {
       return res.status(404).json({ error: "Order not found." });
@@ -1457,6 +1508,52 @@ app.get("/api/orders/number/:orderNumber", async (req, res) => {
   } catch (err) {
     logOrderError("load order by number failed", err, { order_number: req.params?.orderNumber || "" });
     res.status(err.status || 500).json({ error: err.status ? err.message : "Could not load the order." });
+  }
+});
+
+app.post("/api/orders/number/:orderNumber/payment-submission", async (req, res) => {
+  try {
+    await ensureOrderSchemaReady();
+    const orderNumber = String(req.params.orderNumber || "").trim();
+    if (!orderNumber) {
+      return res.status(400).json({ error: "Order number is required." });
+    }
+
+    const order = await loadOrderForRequester(orderNumber, req);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+    if (String(order.payment_method || "").trim().toLowerCase() !== "instapay") {
+      return res.status(400).json({ error: "This order does not use InstaPay." });
+    }
+    if (String(order.payment_status || "").trim().toLowerCase() === "confirmed") {
+      return res.status(400).json({ error: "This payment has already been confirmed." });
+    }
+
+    const paymentReference = normalizePaymentReference(req.body?.payment_reference);
+    const payerMobile = normalizePhone(req.body?.payer_mobile).slice(0, 32);
+    if (!paymentReference && !payerMobile) {
+      return res.status(400).json({ error: "Enter a transfer reference or payer mobile." });
+    }
+
+    await pool.query(
+      `UPDATE orders
+       SET payment_reference = ?,
+           payer_mobile = ?,
+           payment_status = 'awaiting_review',
+           payment_submitted_at = NOW(),
+           payment_rejected_at = NULL,
+           payment_review_note = NULL,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [paymentReference || null, payerMobile || null, order.id]
+    );
+
+    const updatedOrder = await loadOrderDetail("WHERE id = ?", [order.id]);
+    res.json({ ok: true, order: updatedOrder });
+  } catch (err) {
+    logOrderError("submit instapay transfer failed", err, { order_number: req.params?.orderNumber || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not submit transfer details." });
   }
 });
 
@@ -1523,6 +1620,13 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
           district,
           address,
           payment_method,
+          payment_status,
+          payment_reference,
+          payer_mobile,
+          payment_submitted_at,
+          payment_confirmed_at,
+          payment_rejected_at,
+          payment_review_note,
           subtotal_egp,
           shipping_egp,
           total_egp,
@@ -1589,6 +1693,61 @@ app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
   } catch (err) {
     logOrderError("update order status failed", err, { order_id: req.params?.id || "" });
     res.status(err.status || 500).json({ error: err.status ? err.message : "Could not update the order status." });
+  }
+});
+
+app.patch("/api/admin/orders/:id/payment", requireAdmin, async (req, res) => {
+  try {
+    await ensureOrderSchemaReady();
+    const orderId = Number(req.params.id);
+    const action = String(req.body?.action || "").trim().toLowerCase();
+    const reviewNote = normalizePaymentReviewNote(req.body?.note);
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: "Invalid order id." });
+    }
+    if (!["confirm", "reject"].includes(action)) {
+      return res.status(400).json({ error: "Invalid payment action." });
+    }
+
+    const order = await loadOrderDetail("WHERE id = ?", [orderId]);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+    if (String(order.payment_method || "").trim().toLowerCase() !== "instapay") {
+      return res.status(400).json({ error: "Payment review is only available for InstaPay orders." });
+    }
+
+    if (action === "confirm") {
+      await pool.query(
+        `UPDATE orders
+         SET payment_status = 'confirmed',
+             payment_confirmed_at = NOW(),
+             payment_rejected_at = NULL,
+             payment_review_note = NULL,
+             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [orderId]
+      );
+    } else {
+      await pool.query(
+        `UPDATE orders
+         SET payment_status = 'rejected',
+             payment_confirmed_at = NULL,
+             payment_rejected_at = NOW(),
+             payment_review_note = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [reviewNote || null, orderId]
+      );
+    }
+
+    const updatedOrder = await loadOrderDetail("WHERE id = ?", [orderId]);
+    res.json({ ok: true, order: updatedOrder });
+  } catch (err) {
+    logOrderError("update payment status failed", err, { order_id: req.params?.id || "" });
+    res.status(err.status || 500).json({ error: err.status ? err.message : "Could not update payment status." });
   }
 });
 
