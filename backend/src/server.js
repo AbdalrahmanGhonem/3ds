@@ -71,6 +71,8 @@ const pageRoutes = new Map([
   ["/account.html", "account.html"],
   ["/manage", "manage.html"],
   ["/manage.html", "manage.html"],
+  ["/site-settings", "site-settings.html"],
+  ["/site-settings.html", "site-settings.html"],
   ["/admin-products", "admin-products.html"],
   ["/admin-products.html", "admin-products.html"],
   ["/admin-orders", "admin-orders.html"],
@@ -301,9 +303,20 @@ const ORDER_PAYMENT_STATUS_VALUES = new Set([
 ]);
 const ORDER_SHIPPING_THRESHOLD_EGP = 500;
 const ORDER_SHIPPING_FEE_EGP = 60;
+const DEFAULT_SITE_SETTINGS = {
+  contact_phone: "+20 100 000 0000",
+  contact_email: "hello@3ds-store.com",
+  contact_address: "Cairo, Egypt",
+  instagram_url: "",
+  tiktok_url: "",
+  whatsapp: "",
+  footer_text: "",
+  support_text: ""
+};
 
 let orderSchemaPromise = null;
 let cartSchemaPromise = null;
+let siteSettingsSchemaPromise = null;
 
 const createHttpError = (status, message) => {
   const error = new Error(message);
@@ -315,6 +328,8 @@ const normalizeMoney = (value) => Number(Number(value || 0).toFixed(2));
 const normalizePhone = (value) => String(value || "").trim().replace(/\s+/g, " ");
 const normalizePaymentReference = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
 const normalizePaymentReviewNote = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 255);
+const normalizeSiteSettingText = (value, maxLength = 255) =>
+  String(value || "").trim().replace(/\s+/g, " ").slice(0, maxLength);
 const calculateShippingEgp = (subtotal) =>
   subtotal >= ORDER_SHIPPING_THRESHOLD_EGP || subtotal === 0 ? 0 : ORDER_SHIPPING_FEE_EGP;
 const createOrderNumber = () =>
@@ -414,6 +429,109 @@ const ensureCartSchemaReady = async () => {
     });
   }
   return cartSchemaPromise;
+};
+
+const mapSiteSettingsRecord = (row = {}) => ({
+  contact: {
+    phone: normalizeSiteSettingText(row.contact_phone || DEFAULT_SITE_SETTINGS.contact_phone, 120),
+    email: normalizeSiteSettingText(row.contact_email || DEFAULT_SITE_SETTINGS.contact_email, 190),
+    address: normalizeSiteSettingText(row.contact_address || DEFAULT_SITE_SETTINGS.contact_address, 255)
+  },
+  social: {
+    instagram_url: normalizeSiteSettingText(row.instagram_url || DEFAULT_SITE_SETTINGS.instagram_url, 255),
+    tiktok_url: normalizeSiteSettingText(row.tiktok_url || DEFAULT_SITE_SETTINGS.tiktok_url, 255),
+    whatsapp: normalizeSiteSettingText(row.whatsapp || DEFAULT_SITE_SETTINGS.whatsapp, 64)
+  },
+  content: {
+    footer_text: normalizeSiteSettingText(row.footer_text || DEFAULT_SITE_SETTINGS.footer_text, 255),
+    support_text: normalizeSiteSettingText(row.support_text || DEFAULT_SITE_SETTINGS.support_text, 255)
+  }
+});
+
+const ensureSiteSettingsSchema = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id TINYINT UNSIGNED NOT NULL,
+      contact_phone VARCHAR(120) DEFAULT NULL,
+      contact_email VARCHAR(190) DEFAULT NULL,
+      contact_address VARCHAR(255) DEFAULT NULL,
+      instagram_url VARCHAR(255) DEFAULT NULL,
+      tiktok_url VARCHAR(255) DEFAULT NULL,
+      whatsapp VARCHAR(64) DEFAULT NULL,
+      footer_text VARCHAR(255) DEFAULT NULL,
+      support_text VARCHAR(255) DEFAULT NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  const columns = await loadTableColumns("site_settings");
+  await addColumnIfMissing("site_settings", columns, "contact_phone", "contact_phone VARCHAR(120) NULL AFTER id");
+  await addColumnIfMissing("site_settings", columns, "contact_email", "contact_email VARCHAR(190) NULL AFTER contact_phone");
+  await addColumnIfMissing("site_settings", columns, "contact_address", "contact_address VARCHAR(255) NULL AFTER contact_email");
+  await addColumnIfMissing("site_settings", columns, "instagram_url", "instagram_url VARCHAR(255) NULL AFTER contact_address");
+  await addColumnIfMissing("site_settings", columns, "tiktok_url", "tiktok_url VARCHAR(255) NULL AFTER instagram_url");
+  await addColumnIfMissing("site_settings", columns, "whatsapp", "whatsapp VARCHAR(64) NULL AFTER tiktok_url");
+  await addColumnIfMissing("site_settings", columns, "footer_text", "footer_text VARCHAR(255) NULL AFTER whatsapp");
+  await addColumnIfMissing("site_settings", columns, "support_text", "support_text VARCHAR(255) NULL AFTER footer_text");
+
+  await pool.query(
+    `INSERT INTO site_settings (
+      id,
+      contact_phone,
+      contact_email,
+      contact_address,
+      instagram_url,
+      tiktok_url,
+      whatsapp,
+      footer_text,
+      support_text,
+      created_at,
+      updated_at
+    )
+    SELECT 1, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM site_settings WHERE id = 1)`,
+    [
+      DEFAULT_SITE_SETTINGS.contact_phone,
+      DEFAULT_SITE_SETTINGS.contact_email,
+      DEFAULT_SITE_SETTINGS.contact_address,
+      DEFAULT_SITE_SETTINGS.instagram_url,
+      DEFAULT_SITE_SETTINGS.tiktok_url,
+      DEFAULT_SITE_SETTINGS.whatsapp,
+      DEFAULT_SITE_SETTINGS.footer_text,
+      DEFAULT_SITE_SETTINGS.support_text
+    ]
+  );
+};
+
+const ensureSiteSettingsSchemaReady = async () => {
+  if (!siteSettingsSchemaPromise) {
+    siteSettingsSchemaPromise = ensureSiteSettingsSchema().catch((error) => {
+      siteSettingsSchemaPromise = null;
+      throw error;
+    });
+  }
+  return siteSettingsSchemaPromise;
+};
+
+const loadSiteSettings = async () => {
+  await ensureSiteSettingsSchemaReady();
+  const [rows] = await pool.query(
+    `SELECT
+      contact_phone,
+      contact_email,
+      contact_address,
+      instagram_url,
+      tiktok_url,
+      whatsapp,
+      footer_text,
+      support_text
+     FROM site_settings
+     WHERE id = 1
+     LIMIT 1`
+  );
+  return mapSiteSettingsRecord(rows[0] || {});
 };
 
 const ensureOrderSchema = async () => {
@@ -1068,6 +1186,82 @@ app.post("/api/upload", requireAdmin, (req, res) => {
     }
     res.json({ imagePath: `/uploads/${req.file.filename}` });
   });
+});
+
+app.get("/api/site-settings", async (_req, res) => {
+  try {
+    const settings = await loadSiteSettings();
+    res.json({ settings });
+  } catch (err) {
+    console.error("[site-settings] load public settings failed", {
+      message: err?.message,
+      code: err?.code,
+      errno: err?.errno,
+      sqlState: err?.sqlState,
+      sqlMessage: err?.sqlMessage
+    });
+    res.status(500).json({ error: "Could not load site settings right now." });
+  }
+});
+
+app.get("/api/admin/site-settings", requireAdmin, async (_req, res) => {
+  try {
+    const settings = await loadSiteSettings();
+    res.json({ settings });
+  } catch (err) {
+    console.error("[site-settings] load admin settings failed", {
+      message: err?.message,
+      code: err?.code,
+      errno: err?.errno,
+      sqlState: err?.sqlState,
+      sqlMessage: err?.sqlMessage
+    });
+    res.status(500).json({ error: "Could not load site settings right now." });
+  }
+});
+
+app.put("/api/admin/site-settings/contact", requireAdmin, async (req, res) => {
+  try {
+    await ensureSiteSettingsSchemaReady();
+    const contactPhone = normalizeSiteSettingText(req.body?.phone, 120);
+    const contactEmail = normalizeSiteSettingText(req.body?.email, 190);
+    const contactAddress = normalizeSiteSettingText(req.body?.address, 255);
+
+    if (!contactPhone) {
+      return res.status(400).json({ error: "Phone number is required." });
+    }
+    if (!contactEmail) {
+      return res.status(400).json({ error: "Email is required." });
+    }
+    if (!isValidEmail(contactEmail)) {
+      return res.status(400).json({ error: "Enter a valid email address." });
+    }
+    if (!contactAddress) {
+      return res.status(400).json({ error: "Address is required." });
+    }
+
+    await pool.query(
+      `UPDATE site_settings
+       SET contact_phone = ?,
+           contact_email = ?,
+           contact_address = ?,
+           updated_at = NOW()
+       WHERE id = 1`,
+      [contactPhone, contactEmail, contactAddress]
+    );
+
+    const settings = await loadSiteSettings();
+    res.json({ ok: true, settings });
+  } catch (err) {
+    console.error("[site-settings] update contact settings failed", {
+      message: err?.message,
+      code: err?.code,
+      errno: err?.errno,
+      sqlState: err?.sqlState,
+      sqlMessage: err?.sqlMessage
+    });
+    res.status(500).json({ error: "Could not update site settings right now." });
+  }
 });
 
 // Products
@@ -1751,10 +1945,11 @@ for (const [routePath, fileName] of pageRoutes.entries()) {
 
 app.listen(PORT, () => {
   console.log(`API ready on port ${PORT}`);
-  Promise.all([ensureCartSchemaReady(), ensureOrderSchemaReady()])
+  Promise.all([ensureCartSchemaReady(), ensureOrderSchemaReady(), ensureSiteSettingsSchemaReady()])
     .then(() => {
       console.log("[orders] schema ready");
       console.log("[cart] schema ready");
+      console.log("[site-settings] schema ready");
     })
     .catch((error) => {
       logOrderError("schema bootstrap failed", error);

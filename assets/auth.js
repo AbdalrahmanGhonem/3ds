@@ -175,6 +175,12 @@ const syncAdminNavLinks = () => {
         isActive: currentPage === "admin-products" || currentPage === "manage"
       },
       {
+        key: "site-settings",
+        href: "site-settings.html",
+        label: "Site Settings",
+        isActive: currentPage === "site-settings"
+      },
+      {
         key: "orders",
         href: "admin-orders.html",
         label: "Order Details",
@@ -210,7 +216,7 @@ const applyAdminVisibility = () => {
   const user = currentUser();
   const isAdmin = Boolean(user?.is_admin);
   const isLoggedIn = Boolean(user?.id);
-  const adminPages = new Set(["manage", "admin-products", "admin-orders", "admin-order"]);
+  const adminPages = new Set(["manage", "admin-products", "site-settings", "admin-orders", "admin-order"]);
   const accountPages = new Set(["account"]);
   syncAdminNavLinks();
   document.querySelectorAll("[data-admin-only]").forEach((el) => {

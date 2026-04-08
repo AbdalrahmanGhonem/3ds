@@ -97,6 +97,11 @@
     { q: "Can I return the product?", a: "Yes, returns are available based on the return policy and product condition." },
     { q: "How can I place an order?", a: "Choose your product, add it to cart, then complete the checkout form." }
   ];
+  const DEFAULT_CONTACT_SETTINGS = {
+    phone: "+20 100 000 0000",
+    email: "hello@3ds-store.com",
+    address: "Cairo, Egypt"
+  };
 
   const iconPaths = {
     search: '<circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l5 5"></path>',
@@ -1379,6 +1384,36 @@
     });
   };
 
+  const normalizeContactSettings = (contact = {}) => ({
+    phone: String(contact?.phone || DEFAULT_CONTACT_SETTINGS.phone).trim() || DEFAULT_CONTACT_SETTINGS.phone,
+    email: String(contact?.email || DEFAULT_CONTACT_SETTINGS.email).trim() || DEFAULT_CONTACT_SETTINGS.email,
+    address: String(contact?.address || DEFAULT_CONTACT_SETTINGS.address).trim() || DEFAULT_CONTACT_SETTINGS.address
+  });
+
+  const loadContactSettings = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/site-settings`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+      return normalizeContactSettings(data?.settings?.contact || {});
+    } catch (error) {
+      console.warn("Failed to load public contact settings", error);
+      return { ...DEFAULT_CONTACT_SETTINGS };
+    }
+  };
+
+  const renderContactSettings = async () => {
+    const phoneNode = qs("[data-contact-phone]");
+    const emailNode = qs("[data-contact-email]");
+    const addressNode = qs("[data-contact-address]");
+    if (!phoneNode || !emailNode || !addressNode) return;
+
+    const contact = await loadContactSettings();
+    phoneNode.textContent = contact.phone;
+    emailNode.textContent = contact.email;
+    addressNode.textContent = contact.address;
+  };
+
   const bindPaymentMethodControls = () => {
     const options = qsa(".mock-payment-option");
     if (!options.length) return;
@@ -1662,6 +1697,7 @@
     renderIcons();
     loadCart();
     renderCartCount();
+    await renderContactSettings();
     bindContactForm();
     bindPaymentMethodControls();
     bindCheckoutForm();
