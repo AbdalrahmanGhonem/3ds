@@ -47,7 +47,7 @@
   };
   const INSTAPAY_DESTINATION_LABEL = String(window.__INSTAPAY_DESTINATION_LABEL || "InstaPay ID").trim() || "InstaPay ID";
   const INSTAPAY_DESTINATION_VALUE = String(window.__INSTAPAY_DESTINATION_VALUE || "your@instapay").trim() || "your@instapay";
-  const INSTAPAY_OPEN_URL = String(window.__INSTAPAY_OPEN_URL || "").trim();
+  const INSTAPAY_OPEN_URL = String(window.__INSTAPAY_OPEN_URL || "https://ipn.eg/S/bassel.hana/instapay/5XCHJZ").trim();
   const DEFAULT_SELECTED_COLOR = "Default";
   const DEFAULT_PRODUCT_SWATCHES = [
     { name: "Ivory", hex: "#E6E6E1" },
@@ -1296,18 +1296,8 @@
         else delete inlineStatus.dataset.tone;
       };
 
-      qs("[data-instapay-open]", wrap)?.addEventListener("click", async () => {
-        if (INSTAPAY_OPEN_URL) {
-          window.open(INSTAPAY_OPEN_URL, "_blank", "noopener,noreferrer");
-          return;
-        }
-
-        try {
-          await copyText(INSTAPAY_DESTINATION_VALUE);
-          setInlineStatus("No direct InstaPay link is configured yet. The payment info was copied instead.", "success");
-        } catch {
-          setInlineStatus("No direct InstaPay link is configured yet. Copy the payment info manually.", "error");
-        }
+      qs("[data-instapay-open]", wrap)?.addEventListener("click", () => {
+        window.open(INSTAPAY_OPEN_URL, "_blank", "noopener,noreferrer");
       });
 
       qs("[data-copy-instapay]", wrap)?.addEventListener("click", async () => {
