@@ -202,6 +202,8 @@
       return {};
     }
   };
+  const isLoggedIn = () => Boolean(currentUser()?.id);
+  const checkoutLoginRedirect = () => `login.html?next=${encodeURIComponent("checkout.html")}`;
 
   const getGuestToken = () => {
     let token = localStorage.getItem(GUEST_CART_KEY);
@@ -920,7 +922,7 @@
               <div class="mock-summary-line mock-summary-line--total"><span>Total</span><span>${formatMoney(total)}</span></div>
             </div>
             <p class="mock-summary-note">Free delivery on orders above 500 EGP</p>
-            <a href="checkout.html" class="mock-primary-button mock-summary-button">Checkout</a>
+            <a href="${isLoggedIn() ? "checkout.html" : checkoutLoginRedirect()}" class="mock-primary-button mock-summary-button">Checkout</a>
           </div>
         </aside>
       </div>
@@ -1436,6 +1438,14 @@
     const form = qs("[data-checkout-form]");
     if (!button || !status || !form) return;
     button.addEventListener("click", async () => {
+      if (!isLoggedIn()) {
+        status.hidden = false;
+        status.dataset.tone = "error";
+        status.textContent = "Please log in to complete your order.";
+        window.location.href = checkoutLoginRedirect();
+        return;
+      }
+
       if (!form.reportValidity()) return;
 
       if (!state.cart.length) {
@@ -1688,6 +1698,10 @@
     loadCart();
     renderCartCount();
     await renderContactSettings();
+    if (currentPage() === "checkout" && !isLoggedIn()) {
+      window.location.href = checkoutLoginRedirect();
+      return;
+    }
     bindContactForm();
     bindPaymentMethodControls();
     bindCheckoutForm();

@@ -1483,6 +1483,15 @@ app.post("/api/orders", async (req, res) => {
     await ensureCartSchemaReady();
     await ensureOrderSchemaReady();
 
+    const authenticatedUser = await loadAuthenticatedUser(
+      req.headers?.user_id,
+      toDatabaseFlag(req.headers?.is_admin) === 1
+    );
+    const numericAuthenticatedUserId = Number(authenticatedUser?.id);
+    if (!authenticatedUser || !Number.isFinite(numericAuthenticatedUserId) || numericAuthenticatedUserId <= 0) {
+      return res.status(401).json({ error: "Please log in to complete your order." });
+    }
+
     const identifier = cartIdentifier(req);
     const requestedItems = sanitizeCartItems(req.body?.items);
     console.info("[orders] incoming payload", {
@@ -1520,8 +1529,7 @@ app.post("/api/orders", async (req, res) => {
     const { subtotal, lines } = buildOrderItemsFromCart(cartItems, productMap);
     const shipping = calculateShippingEgp(subtotal);
     const total = normalizeMoney(subtotal + shipping);
-    const numericUserId = Number(req.headers?.user_id);
-    const userId = Number.isFinite(numericUserId) && numericUserId > 0 ? numericUserId : null;
+    const userId = numericAuthenticatedUserId;
     const guestToken = identifier.type === "guest" ? identifier.value : null;
 
     connection = await pool.getConnection();
