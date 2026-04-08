@@ -31,7 +31,7 @@ SELECT
   '+20 100 000 0000',
   'hello@3ds-store.com',
   'Cairo, Egypt',
-  '',
+  '201003520303',
   '',
   '',
   '',

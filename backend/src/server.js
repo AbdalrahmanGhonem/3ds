@@ -309,7 +309,7 @@ const DEFAULT_SITE_SETTINGS = {
   contact_address: "Cairo, Egypt",
   instagram_url: "",
   tiktok_url: "",
-  whatsapp: "",
+  whatsapp: "201003520303",
   footer_text: "",
   support_text: ""
 };

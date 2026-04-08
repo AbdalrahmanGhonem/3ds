@@ -15,7 +15,7 @@
   const PRODUCT_SOURCE = "/assets/products.json";
   const PRODUCT_IMAGE_FALLBACK = "/assets/hero-keychain.svg";
   const ORDER_SUCCESS_STORAGE_KEY = "last_order_success_v1";
-  const ORDER_WHATSAPP_NUMBER = String(window.__ORDER_WHATSAPP_NUMBER || "+201000000000").replace(/\D/g, "");
+  const ORDER_WHATSAPP_NUMBER = String(window.__ORDER_WHATSAPP_NUMBER || "201003520303").replace(/\D/g, "");
   const PAYMENT_METHODS = {
     cash_on_delivery: {
       label: "Cash on Delivery",
